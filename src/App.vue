@@ -46,13 +46,12 @@ onMounted(async () => {
   <div class="app">
     <header class="topbar">
       <div class="brand">
-        <span class="brand-icon">
-          <img v-if="!logoFailed" class="brand-logo" :src="MASCOT_URL" alt="" @error="logoFailed = true" />
-          <span v-else class="brand-mark"><Icon name="board" :size="16" /></span>
-          <span class="flag brand-flag" title="Feito no Brasil" aria-label="Feito no Brasil"></span>
-        </span>
+        <img v-if="!logoFailed" class="brand-logo" :src="MASCOT_URL" alt="" @error="logoFailed = true" />
+        <span v-else class="brand-mark"><Icon name="board" :size="16" /></span>
         <span class="brand-text">
-          <span class="brand-name">ai-job-search<span class="brand-suffix">-dashboard</span></span>
+          <span class="brand-name">
+            <span class="flag brand-flag" title="Feito no Brasil" aria-label="Feito no Brasil"></span>ai-job-search<span class="brand-suffix">-dashboard</span>
+          </span>
           <a class="brand-by" href="https://github.com/domini-crusader/ai-job-search-dashboard" target="_blank" rel="noopener">por DominiCrusader</a>
         </span>
       </div>

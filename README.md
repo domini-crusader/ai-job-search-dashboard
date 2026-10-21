@@ -1,9 +1,8 @@
-# ai-job-search-dashboard
+# 🇧🇷 ai-job-search-dashboard
 
 <sub>por [DominiCrusader](https://github.com/domini-crusader)</sub>
 
-<img src="https://raw.githubusercontent.com/MadsLorentzen/ai-job-search/master/assets/mascot/pip_flight_loop.gif" alt="Pip, o mascote do ai-job-search" width="120"><br>
-🇧🇷
+<img src="https://raw.githubusercontent.com/MadsLorentzen/ai-job-search/master/assets/mascot/pip_flight_loop.gif" alt="Pip, o mascote do ai-job-search" width="120">
 
 Addon para o [ai-job-search](https://github.com/MadsLorentzen/ai-job-search), de [Mads Lorentzen](https://github.com/MadsLorentzen): um painel local em Kanban com todas as vagas e candidaturas do seu workspace, mais botões para os comandos do projeto.
 
