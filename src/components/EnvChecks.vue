@@ -2,7 +2,7 @@
 import { state, trigger, savePrefs } from '../store.js'
 import Icon from './Icon.vue'
 
-const ACTION_LABELS = { 'install-pypdf': 'Instalar', 'install-portals': 'Instalar', scrape: 'Buscar vagas' }
+const ACTION_LABELS = { 'install-pypdf': 'Instalar', 'install-portals': 'Instalar', scrape: 'Buscar vagas', login: 'Fazer login' }
 </script>
 
 <template>
@@ -34,6 +34,5 @@ const ACTION_LABELS = { 'install-pypdf': 'Instalar', 'install-portals': 'Instala
         </div>
       </div>
     </div>
-    <p class="muted small foot-note"><Icon name="layout" :size="13" style="display:inline;vertical-align:-2px" /> Workspace: <code>{{ state.health.workspace }}</code></p>
   </template>
 </template>

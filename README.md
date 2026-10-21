@@ -62,8 +62,11 @@ O servidor escuta só em `127.0.0.1`.
 ### Início
 
 - **Perfil:** valida, etapa por etapa, o que o `/setup` preenche: identidade, formação, experiência, habilidades, perfil comportamental, objetivos, configuração de busca, templates de CV e carta e exemplos STAR. Cada etapa lista o que falta e oferece o comando que completa (`/setup`, `/expand`). Certificações e `documents/` aparecem como opcionais.
+  
+  Ao abrir uma etapa, você vê e edita as seções de onde o ai-job-search lê aquele dado: o resumo no `CLAUDE.md` e o detalhe nos arquivos `01`…`07` do job-application-assistant. A edição é feita por campos, itens de lista e tabelas (por exemplo, idiomas × nível), ou direto em Markdown. Comentários e o que o editor não reconhece voltam intactos.
 - **Busca:** reorganiza as escolhas que o ai-job-search oferece para o `/scrape`:
   - reordenar (arrastando), editar, criar e remover as categorias de `search-queries.md`;
+  - montar consultas por tags: cargo, site, tecnologia, nível, modalidade e local. As opções vêm do próprio workspace (sites e cargos já usados nas consultas, stack principal do perfil, filtros do `/scrape`). As consultas existentes aparecem como tags;
   - ligar e desligar portais (a chave `enabled` de cada `SKILL.md`);
   - mudar a janela de datas.
   
@@ -81,6 +84,21 @@ Um Kanban por **lista de objetivos**. A lista "Todas as vagas" mostra tudo; crie
 - quais colunas aparecem.
 
 As listas ficam em `~/.ai-job-search-dashboard/` (uma por workspace), fora do repositório: não mudam nenhum dado do ai-job-search.
+
+Os botões **Buscar vagas** (`/scrape`) e **Ranquear** (`/rank`) ficam ao lado da busca.
+
+**Detalhes da vaga.** Ao abrir um card, o painel lê o anúncio pelas mesmas vias do ai-job-search:
+- no LinkedIn, o código do CLI `linkedin-search`;
+- nos demais sites, `tools/fetch_page.py` (que respeita o `robots.txt`) e os dados estruturados (JSON-LD `JobPosting`) da página.
+
+Ele mostra:
+- o logo da empresa e o do portal;
+- as tags que mais pesam: tipo de vaga, modelo de trabalho, remuneração e nível;
+- a categoria de busca que casou com a vaga;
+- um resumo com contrato (CLT, PJ...), jornada, local, idioma, tecnologias, requisitos, diferenciais, benefícios e responsabilidades;
+- a descrição completa.
+
+A extração é heurística e roda localmente; o resultado fica em cache por 7 dias em `~/.ai-job-search-dashboard/cache/`. Os cards também passam a exibir o logo, o modelo de trabalho e o nível.
 
 ### Comandos
 

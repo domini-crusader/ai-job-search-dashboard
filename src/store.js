@@ -19,7 +19,23 @@ export const state = reactive({
   prefs: loadPrefs(),
   dialog: null, // { command, params } - diálogo de parâmetros aberto
   selected: null, // id do card aberto no painel lateral
+  details: {}, // id -> { loading, data, error } - detalhes extraídos da vaga
 })
+
+export async function loadDetails(id, refresh = false) {
+  const cur = state.details[id]
+  if (cur?.loading || (cur?.data && !refresh)) return
+  state.details[id] = { loading: true, data: cur?.data ?? null, error: null }
+  try {
+    const data = await api(`/api/job?id=${encodeURIComponent(id)}${refresh ? '&refresh=1' : ''}`)
+    state.details[id] = { loading: false, data, error: null }
+    // Atualiza o resumo do card sem recarregar o quadro inteiro.
+    const card = [...state.board.jobs, ...state.board.applications].find((c) => c.id === id)
+    if (card) card.brief = { workModel: data.workModel, seniority: data.seniority?.[0] ?? null, salary: data.salary, logo: data.logo || data.companyFavicon }
+  } catch (e) {
+    state.details[id] = { loading: false, data: cur?.data ?? null, error: e.message }
+  }
+}
 
 function tabFromHash() {
   const t = location.hash.replace(/^#\/?/, '')
@@ -52,6 +68,19 @@ async function api(path, { method = 'GET', body } = {}) {
   const data = await res.json().catch(() => ({}))
   if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`)
   return data
+}
+
+export async function apiPut(path, body) {
+  try {
+    return await api(path, { method: 'PUT', body })
+  } catch (e) {
+    toast(e.message, 'error')
+    return null
+  }
+}
+
+export async function apiGet(path) {
+  try { return await api(path) } catch (e) { toast(e.message, 'error'); return null }
 }
 
 export function toast(message, kind = 'info', action = null) {

@@ -2,6 +2,7 @@
 import { computed, ref, watch } from 'vue'
 import { state, saveCategories, saveDays, togglePortal, saveLists, goTo, toast, trigger } from '../store.js'
 import Icon from './Icon.vue'
+import QueryBuilder from './QueryBuilder.vue'
 
 // Rascunho local das categorias; só vai para o search-queries.md ao salvar.
 const draft = ref([])
@@ -103,7 +104,11 @@ async function listFrom(cat) {
         <div v-if="open === c.key" class="cat-edit">
           <label class="field"><span>Título</span><input v-model="c.title" class="input" maxlength="120" /></label>
           <label class="field"><span>Descrição</span><textarea v-model="c.description" class="input area" rows="2"></textarea></label>
-          <label class="field"><span>Consultas (uma por linha)</span><textarea v-model="c.queries" class="input area mono" rows="6" spellcheck="false"></textarea></label>
+          <QueryBuilder :category="c" />
+          <details class="more">
+            <summary>Editar consultas como texto</summary>
+            <textarea v-model="c.queries" class="input area mono" rows="6" spellcheck="false"></textarea>
+          </details>
           <label class="field"><span>Notas (títulos-variantes, observações)</span><textarea v-model="c.notes" class="input area" rows="2"></textarea></label>
           <div class="cat-edit-foot">
             <button class="btn ghost sm danger" @click="remove(i)"><Icon name="trash" :size="14" /> Remover</button>
@@ -148,7 +153,7 @@ async function listFrom(cat) {
       </div>
     </div>
     <p class="muted small foot-note">
-      Antes de cada gravação, o arquivo original é copiado para <code>{{ state.search.backups }}</code>.
+      Antes de cada gravação, o arquivo original é copiado para <code>~/.ai-job-search-dashboard/backups</code>.
     </p>
   </template>
 </template>

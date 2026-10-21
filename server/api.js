@@ -6,8 +6,9 @@ import { spawn } from 'node:child_process'
 import { ROOT, SEEN, TRACKER, loadBoard, setSeenStatus, setTrackerStatus, httpError } from './data.js'
 import { findCommand, publicCatalog, claudeBin, pdfFor } from './commands.js'
 import { health } from './health.js'
-import { profileReport } from './profile.js'
-import { searchSettings, saveCategories, saveDays, setPortalEnabled, readLists, writeLists } from './settings.js'
+import { jobDetails, brief } from './enrich.js'
+import { profileReport, stepSections, saveSection } from './profile.js'
+import { searchSettings, saveCategories, saveDays, setPortalEnabled, readLists, writeLists, writeText, readText } from './settings.js'
 
 const running = new Map() // id do comando -> processo filho em execução
 const sseClients = new Set()
@@ -123,14 +124,33 @@ async function handle(req, res) {
   const route = `${req.method} ${url.pathname}`
 
   switch (route) {
-    case 'GET /api/board':
-      return send(res, 200, loadBoard())
+    case 'GET /api/board': {
+      const board = loadBoard()
+      for (const card of [...board.jobs, ...board.applications]) card.brief = brief(card.id)
+      return send(res, 200, board)
+    }
+
+    case 'GET /api/job': {
+      const id = url.searchParams.get('id')
+      const board = loadBoard()
+      const card = [...board.jobs, ...board.applications].find((c) => c.id === id)
+      return send(res, 200, await jobDetails(card, { refresh: url.searchParams.get('refresh') === '1' }))
+    }
 
     case 'GET /api/health':
       return send(res, 200, await health())
 
     case 'GET /api/profile':
       return send(res, 200, profileReport())
+
+    case 'GET /api/profile/sections':
+      return send(res, 200, stepSections(url.searchParams.get('step')))
+
+    case 'PUT /api/profile/section': {
+      const body = await readJson(req)
+      try { saveSection(body, writeText, readText) } catch (e) { throw httpError(400, e.message) }
+      return send(res, 200, { sections: stepSections(body.step), profile: profileReport() })
+    }
 
     case 'GET /api/settings/search':
       return send(res, 200, searchSettings())

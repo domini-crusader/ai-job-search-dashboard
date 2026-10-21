@@ -124,6 +124,12 @@ function pickFinal(status) {
         <Icon name="search" :size="15" />
         <input v-model="search" class="input" type="search" placeholder="Buscar nesta lista" />
       </div>
+      <button class="btn primary" title="Busca novas vagas nos portais (/scrape)" @click="trigger('scrape', { args: '' })">
+        <Icon name="search" :size="15" /> Buscar vagas
+      </button>
+      <button class="btn warm" title="Pontua as vagas novas (/rank)" @click="trigger('rank', { args: '' })">
+        <Icon name="star" :size="15" /> Ranquear
+      </button>
       <div class="filter-chips">
         <span v-for="f in activeFilters" :key="f" class="fchip">{{ f }}</span>
         <button class="btn ghost sm" @click="editing = list"><Icon name="cog" :size="14" /> {{ activeFilters.length ? 'Editar filtros' : 'Filtros e colunas' }}</button>

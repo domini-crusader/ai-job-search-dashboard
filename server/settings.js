@@ -15,7 +15,7 @@ const QUERIES = path.join(ROOT, '.claude', 'skills', 'job-scraper', 'search-quer
 const PORTALS = path.join(ROOT, '.agents', 'skills')
 
 export const CONFIG_DIR = process.env.AJS_DASHBOARD_HOME || path.join(os.homedir(), '.ai-job-search-dashboard')
-const WS_ID = crypto.createHash('sha1').update(ROOT.toLowerCase()).digest('hex').slice(0, 10)
+export const WS_ID = crypto.createHash('sha1').update(ROOT.toLowerCase()).digest('hex').slice(0, 10)
 const LISTS_FILE = path.join(CONFIG_DIR, `lists-${WS_ID}.json`)
 
 // ---------- utilitários ----------
@@ -29,7 +29,7 @@ function backup(file) {
   fs.copyFileSync(file, path.join(dir, `${stamp}__${name}`))
 }
 
-function writeText(file, text, eol) {
+export function writeText(file, text, eol) {
   backup(file)
   const out = eol === '\r\n' ? text.replace(/\r?\n/g, '\r\n') : text
   const tmp = `${file}.${process.pid}.tmp`
@@ -37,7 +37,7 @@ function writeText(file, text, eol) {
   fs.renameSync(tmp, file)
 }
 
-function readText(file) {
+export function readText(file) {
   const raw = fs.readFileSync(file, 'utf8')
   return { text: raw.replace(/\r\n/g, '\n'), eol: raw.includes('\r\n') ? '\r\n' : '\n' }
 }
@@ -124,11 +124,44 @@ function portals() {
     })
 }
 
+// Vocabulário de tags para montar consultas, tirado do que o ai-job-search já usa:
+// sites dos `site:` e da seção "Search Sites", cargos das consultas e dos
+// "Títulos-variantes", stack principal do CLAUDE.md e os filtros do /scrape.
+function vocabulary(parsed) {
+  const text = parsed?.text ?? ''
+  const uniq = (arr) => [...new Map(arr.map((s) => [s.toLowerCase(), s])).values()]
+  const sites = uniq([
+    ...[...text.matchAll(/site:([^\s"()]+)/g)].map((m) => m[1]),
+    ...[...(text.match(/## Search Sites[\s\S]*?(?=\n## )/)?.[0] ?? '').matchAll(/\*\*([a-z0-9.-]+\.[a-z]{2,}[^*\s]*)\*\*/gi)].map((m) => m[1]),
+  ])
+  const titles = uniq([
+    ...(parsed?.categories ?? []).flatMap((c) => [...c.queries.matchAll(/"([^"]+)"/g)].map((m) => m[1].trim())),
+    ...(parsed?.categories ?? []).flatMap((c) => (c.notes.match(/T[íi]tulos?-variantes?:\s*(.+)/i)?.[1] ?? '').split(/,\s*/)),
+  ].map((s) => s.replace(/\.$/, '').trim()).filter((s) => s.length > 1 && !/^(remoto|remote)$/i.test(s)))
+  let primary = []
+  try {
+    const claude = fs.readFileSync(path.join(ROOT, 'CLAUDE.md'), 'utf8')
+    const line = claude.match(/^- \*\*Primary:\*\*\s*(.+)$/m)?.[1] ?? ''
+    primary = line.replace(/\([^)]*\)/g, '').split(/,\s*/).map((s) => s.trim()).filter(Boolean)
+  } catch { /* sem CLAUDE.md */ }
+  // Termo de uma palavra entre aspas (".NET", "AWS") é tecnologia, não cargo.
+  const single = titles.filter((t) => !/\s/.test(t))
+  return {
+    sites: sites.filter((s) => /^[a-z0-9-]+(\.[a-z0-9-]+)+(\/\S*)?$/i.test(s)),
+    titles: titles.filter((t) => /\s/.test(t)).slice(0, 60),
+    stacks: uniq([...single, ...primary]).slice(0, 20),
+    levels: ['Júnior', 'Pleno', 'Sênior', 'Especialista', 'Tech Lead', 'Staff', 'Senior', 'Lead'],
+    modes: ['remoto', 'remote', '100% remoto', 'home office', 'híbrido'],
+    locations: ['Brasil', 'Brazil', 'LATAM', 'Remote', 'São Paulo'],
+  }
+}
+
 export function searchSettings() {
   let parsed = null
   let error = null
   try { parsed = parseQueries() } catch (e) { error = e.message }
   return {
+    vocab: vocabulary(parsed),
     file: path.relative(ROOT, QUERIES).replace(/\\/g, '/'),
     error,
     days: parsed?.days ?? null,

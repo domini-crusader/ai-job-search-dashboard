@@ -64,7 +64,6 @@ onMounted(async () => {
       </nav>
 
       <div class="top-right">
-        <span class="workspace-chip" :title="state.catalog.workspace">{{ state.catalog.workspace }}</span>
         <button class="btn ghost icon-only" :title="`Tema: ${state.prefs.theme}`" @click="cycleTheme">
           <Icon :name="themeIcon" />
         </button>

@@ -1,6 +1,7 @@
 <script setup>
 import { computed } from 'vue'
 import { STATUS_LABELS, daysUntil } from '../columns.js'
+import CompanyLogo from './CompanyLogo.vue'
 
 const props = defineProps({ card: Object, selected: Boolean, dragging: Boolean })
 defineEmits(['open', 'dragstart', 'dragend'])
@@ -41,6 +42,7 @@ const flagged = computed(() => ['FLAG', 'FAIL'].includes(props.card.details?.lan
     @click="$emit('open')" @keydown.enter="$emit('open')"
   >
     <div class="card-top">
+      <CompanyLogo :sources="[card.brief?.logo]" :name="card.company" :size="30" />
       <h3 :title="card.title">{{ card.title }}</h3>
       <span v-if="card.score != null" class="pill" :class="band" title="Pontuação">{{ Math.round(card.score) }}</span>
       <i v-else-if="card.fit" class="fit-dot" :class="card.fit" :title="`fit ${card.fit}`"></i>
@@ -49,6 +51,8 @@ const flagged = computed(() => ['FLAG', 'FAIL'].includes(props.card.details?.lan
     <div class="card-meta">
       <span v-if="statusTag" class="pill">{{ statusTag }}</span>
       <span v-if="flagged" class="pill soon" title="Idioma ou local a conferir">conferir</span>
+      <span v-if="card.brief?.workModel" class="pill">{{ card.brief.workModel }}</span>
+      <span v-if="card.brief?.seniority" class="pill">{{ card.brief.seniority }}</span>
       <span v-if="source">{{ source }}</span>
       <span v-if="source && card.date" class="sep">·</span>
       <span v-if="card.date">{{ card.date.slice(5).split('-').reverse().join('/') }}</span>

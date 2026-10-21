@@ -44,7 +44,11 @@ export function claudeBin() {
   }
   const finder = process.platform === 'win32' ? 'where.exe' : 'which'
   const r = spawnSync(finder, ['claude'], { encoding: 'utf8', windowsHide: true })
-  if (r.status === 0) claudeCache = r.stdout.split(/\r?\n/).find(Boolean)?.trim() || null
+  if (r.status === 0) {
+    const found = r.stdout.split(/\r?\n/).map((l) => l.trim()).filter(Boolean)
+    // npm instala também um script sem extensão (para Git Bash) que o Windows não executa.
+    claudeCache = (process.platform === 'win32' ? found.find((f) => /\.(exe|cmd)$/i.test(f)) : found[0]) || null
+  }
   return claudeCache
 }
 
@@ -141,6 +145,8 @@ export const COMMANDS = [
     description: 'Lacunas de skills nas vagas acompanhadas (/upskill).', prompt: () => '/upskill' },
   { id: 'notion-sync', kind: 'claude', group: 'reports', label: 'Enviar ao Notion', icon: 'database',
     description: 'Envia vagas e candidaturas ao Notion (/notion-sync).', prompt: () => '/notion-sync' },
+  { id: 'login', kind: 'claude', group: 'setup', label: 'Entrar no Claude', icon: 'user',
+    description: 'Abre o Claude Code para fazer login na sua conta (/login).', prompt: () => '/login' },
   { id: 'setup', kind: 'claude', group: 'setup', label: 'Configurar perfil', icon: 'user',
     description: 'Onboarding / revisão do perfil (/setup).', prompt: () => '/setup' },
   { id: 'expand', kind: 'claude', group: 'setup', label: 'Expandir competências', icon: 'plus',

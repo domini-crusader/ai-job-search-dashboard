@@ -55,6 +55,12 @@ export async function health() {
   const missingPortals = ports.filter((p) => !p.installed)
   const board = loadBoard()
   const claude = claudeBin()
+  // `claude auth status` imprime JSON com loggedIn; o .cmd do npm só roda via shell
+  // (os argumentos são fixos, nada vem do usuário).
+  const auth = claude ? await new Promise((resolve) => {
+    execFile(claude, ['auth', 'status'], { timeout: 15000, windowsHide: true, encoding: 'utf8', shell: /\.cmd$/i.test(claude) },
+      (err, stdout) => { try { resolve(JSON.parse(stdout)) } catch { resolve(null) } })
+  }) : null
 
   const sections = [
     {
@@ -67,8 +73,11 @@ export async function health() {
         item('bun', 'Bun', bun ? true : 'warn', bun ? `versão ${bun}` : 'Necessário para os CLIs dos portais (bun.sh)'),
         item('latex', 'LaTeX', lualatex && xelatex ? true : 'warn',
           lualatex && xelatex ? versionLine(lualatex) : 'lualatex/xelatex não encontrados (MiKTeX ou TeX Live)'),
-        item('claude', 'Claude Code CLI', claude ? true : 'warn',
-          claude ? 'Comandos abrem direto no terminal' : 'Opcional — sem ele, os comandos são copiados'),
+        item('claude', 'Claude Code CLI', claude && auth?.loggedIn ? true : 'warn',
+          !claude ? 'Opcional — sem ele, os comandos são copiados'
+            : auth?.loggedIn ? 'Comandos abrem direto no terminal'
+              : 'Instalado, mas sem login — entre na sua conta para rodar os comandos',
+          { action: claude && !auth?.loggedIn ? 'login' : null }),
       ],
     },
     {

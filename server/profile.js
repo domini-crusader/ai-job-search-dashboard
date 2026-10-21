@@ -50,6 +50,69 @@ function step(id, title, description, checks, { optional = false, fix = 'setup',
 
 const check = (label, ok, hint) => ({ label, ok: Boolean(ok), hint: ok ? null : hint })
 
+// ---------- seções editáveis por etapa ----------
+// Cada etapa aponta para as seções de onde o ai-job-search lê aquele dado: o resumo
+// no CLAUDE.md e o detalhe nos arquivos do job-application-assistant.
+
+const SK = (n) => `${SKILL.replace(/\\/g, '/')}/${n}`
+export const STEP_SECTIONS = {
+  identity: [['CLAUDE.md', 'Identity', 3], [SK('01-candidate-profile.md'), 'Identity', 2]],
+  education: [['CLAUDE.md', 'Education', 3], [SK('01-candidate-profile.md'), 'Education', 2]],
+  experience: [['CLAUDE.md', 'Professional Experience', 3], [SK('01-candidate-profile.md'), 'Professional Experience', 2]],
+  skills: [['CLAUDE.md', 'Technical Skills', 3], [SK('01-candidate-profile.md'), 'Technical Skills', 2]],
+  behavior: [['CLAUDE.md', 'Behavioral Profile', 3], [SK('02-behavioral-profile.md'), 'Strongest Behaviors', 2],
+    [SK('02-behavioral-profile.md'), 'How You Work Best', 2], [SK('02-behavioral-profile.md'), 'Growth Areas (frame positively in applications)', 2]],
+  goals: [['CLAUDE.md', 'What Excites You', 3], ['CLAUDE.md', 'Target Sectors', 3], ['CLAUDE.md', 'Deal-breakers', 3]],
+  interview: [[SK('07-interview-prep.md'), 'Ready-Made STAR Examples', 2]],
+  extras: [['CLAUDE.md', 'Certifications', 3], ['CLAUDE.md', 'Publications', 3], ['CLAUDE.md', 'Awards', 3]],
+}
+
+const esc = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+
+function locate(text, heading, level) {
+  const re = new RegExp(`^${'#'.repeat(level)}[ \\t]+${esc(heading)}[ \\t]*$`, 'm')
+  const m = re.exec(text)
+  if (!m) return null
+  const bodyStart = m.index + m[0].length
+  const next = new RegExp(`^#{1,${level}}[ \\t]`, 'm').exec(text.slice(bodyStart))
+  return { bodyStart, bodyEnd: next ? bodyStart + next.index : text.length }
+}
+
+function allowed(file, heading, level) {
+  return Object.values(STEP_SECTIONS).flat().some(([f, h, l]) => f === file && h === heading && l === level)
+}
+
+export function stepSections(stepId) {
+  const list = STEP_SECTIONS[stepId]
+  if (!list) return []
+  return list.map(([file, heading, level]) => {
+    const abs = path.join(ROOT, file)
+    if (!fs.existsSync(abs)) return { file, heading, level, exists: false, content: '' }
+    const text = fs.readFileSync(abs, 'utf8').replace(/\r\n/g, '\n')
+    const loc = locate(text, heading, level)
+    return { file, heading, level, exists: Boolean(loc), content: loc ? text.slice(loc.bodyStart, loc.bodyEnd).replace(/^\n+|\s+$/g, '') : '' }
+  })
+}
+
+export function saveSection({ file, heading, level, content }, writeText, readText) {
+  if (!allowed(file, heading, Number(level))) throw new Error('seção não editável')
+  const body = String(content ?? '').replace(/\r\n/g, '\n').replace(/\s+$/, '')
+  if (body.length > 50000) throw new Error('texto grande demais')
+  if (new RegExp(`^#{1,${level}}[ \\t]`, 'm').test(body)) {
+    throw new Error(`não use títulos de nível ${level} ou maior dentro da seção (use ${'#'.repeat(Number(level) + 1)})`)
+  }
+  const abs = path.join(ROOT, file)
+  const { text, eol } = readText(abs)
+  const loc = locate(text, heading, Number(level))
+  if (!loc) throw new Error(`seção "${heading}" não encontrada em ${file}`)
+  // Mantém as linhas em branco que o arquivo já tinha antes e depois do conteúdo.
+  const old = text.slice(loc.bodyStart, loc.bodyEnd)
+  const lead = old.match(/^\s*?\n*/)[0] || '\n'
+  const trail = old.match(/\n*$/)[0] || '\n'
+  const out = `${text.slice(0, loc.bodyStart)}${lead}${body}${trail}${text.slice(loc.bodyEnd)}`
+  writeText(abs, out, eol)
+}
+
 export function profileReport() {
   const claude = read('CLAUDE.md')
   const p01 = read(path.join(SKILL, '01-candidate-profile.md'))
