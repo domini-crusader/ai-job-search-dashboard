@@ -245,7 +245,7 @@ button, input, select, textarea { font: inherit; color: inherit; }
 .drawer-head .titles { flex: 1; min-width: 0; }
 .eyebrow { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); }
 .drawer-head h2 { font-size: 17px; font-weight: 600; letter-spacing: -0.01em; line-height: 1.3; margin-top: 4px; }
-.drawer-head .company { color: var(--text-2); margin-top: 2px; }
+.drawer-head .company { color: var(--text-2); margin-top: 2px; display: flex; align-items: center; }
 .drawer-body { flex: 1; overflow-y: auto; padding: 0 20px 24px; display: flex; flex-direction: column; gap: 22px; }
 .actions-row { display: flex; flex-wrap: wrap; gap: 8px; }
 .actions-row .btn { flex: 1; }
@@ -462,7 +462,6 @@ button, input, select, textarea { font: inherit; color: inherit; }
 .sk-s { width: 50%; height: 10px; margin-bottom: 4px; }
 @keyframes pulse { 50% { opacity: 0.5; } }
 .match-row { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-top: -10px; }
-.status-select { flex: 1 1 140px; }
 .loading-note { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--muted); }
 .summary { font-size: 13.5px; color: var(--text-2); line-height: 1.55; margin-bottom: 12px; }
 .chips { display: flex; flex-wrap: wrap; gap: 6px; }

@@ -1,7 +1,7 @@
 <script setup>
 import { computed, watch } from 'vue'
-import { state, trigger, setStatus, loadDetails } from '../store.js'
-import { STATUS_LABELS, FINAL_STATUSES } from '../columns.js'
+import { state, trigger, loadDetails } from '../store.js'
+import { STATUS_LABELS } from '../columns.js'
 import Icon from './Icon.vue'
 import CompanyLogo from './CompanyLogo.vue'
 
@@ -14,12 +14,6 @@ watch(() => props.card.id, (id) => loadDetails(id), { immediate: true })
 
 const det = computed(() => state.details[props.card.id] ?? { loading: true })
 const x = computed(() => det.value.data)
-
-const statusOptions = computed(() =>
-  isApp.value
-    ? ['drafted', 'applied', 'interview', 'offer', ...FINAL_STATUSES]
-    : ['new', 'skipped', ...(props.card.score != null ? ['ranked'] : [])],
-)
 
 // Tags da busca: o que mais pesa para decidir, antes de qualquer detalhe.
 const searchTags = computed(() => {
@@ -99,10 +93,6 @@ const when = (iso) => new Date(iso).toLocaleString('pt-BR', { day: '2-digit', mo
           <button class="btn" @click="trigger('interview', { args: refText })"><Icon name="mic" /> Entrevista</button>
         </template>
         <a v-if="card.url" class="btn" :href="card.url" target="_blank" rel="noopener noreferrer"><Icon name="external" /> Abrir vaga</a>
-        <select class="select status-select" :value="card.status" aria-label="Status" @change="setStatus(card, $event.target.value)">
-          <option v-if="!statusOptions.includes(card.status)" :value="card.status" disabled>{{ STATUS_LABELS[card.status] || card.status }}</option>
-          <option v-for="s in statusOptions" :key="s" :value="s">{{ STATUS_LABELS[s] }}</option>
-        </select>
       </div>
 
       <div v-if="det.loading && !x" class="loading-note"><Icon name="refresh" class="spin" :size="14" /> Lendo o anúncio da vaga…</div>
