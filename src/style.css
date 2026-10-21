@@ -440,6 +440,15 @@ button, input, select, textarea { font: inherit; color: inherit; }
 .vocab-foot .spacer { flex: 1; }
 .site-row { gap: 12px; justify-content: flex-start; }
 .site-row .grow { min-width: 0; }
+.portals { overflow: hidden; }
+.portal-group { display: flex; align-items: center; gap: 8px; padding: 10px 16px; background: var(--subtle); font-size: 13px; color: var(--text-2); }
+.portal-group + .pref-row, .pref-row + .portal-group { border-top: 1px solid var(--border); }
+.portal-group b { color: var(--text); font-weight: 600; }
+.portal-group.br { background: linear-gradient(90deg, color-mix(in srgb, #16a34a 14%, var(--surface)), var(--subtle) 70%); }
+.flag { position: relative; width: 20px; height: 14px; border-radius: 3px; background: #16a34a; flex-shrink: 0; }
+.flag::before { content: ''; position: absolute; inset: 2px 3px; background: #facc15; clip-path: polygon(50% 0, 100% 50%, 50% 100%, 0 50%); }
+.flag::after { content: ''; position: absolute; left: 50%; top: 50%; width: 6px; height: 6px; margin: -3px 0 0 -3px; border-radius: 50%; background: #1d4ed8; }
+.add-portal-icon { width: 28px; height: 28px; border-radius: 22%; display: grid; place-items: center; background: var(--subtle); color: var(--text-2); flex-shrink: 0; }
 .qb-actions .muted { margin-right: auto; }
 
 /* ---------- logos e detalhes da vaga ---------- */

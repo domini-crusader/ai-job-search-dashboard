@@ -47,6 +47,12 @@ function remove(i) {
     draft.value = draft.value.filter((_, k) => k !== i)
   }
 }
+// Portais e sites: os brasileiros (com ou sem CLI) primeiro; os demais CLIs depois.
+const portalOf = (site) => state.search?.portals?.find((p) => p.id === site.portalId)
+const brIds = computed(() => new Set((state.search?.regional ?? []).map((s) => s.portalId).filter(Boolean)))
+const otherPortals = computed(() => (state.search?.portals ?? []).filter((p) => !brIds.value.has(p.id)))
+const brCount = computed(() => (state.search?.regional ?? []).filter((s) => s.cli).length)
+
 // Inclui um site brasileiro no search-queries.md (Search Sites + uma consulta site: por categoria).
 async function includeSite(site) {
   if (dirty.value && !confirm('Há alterações não salvas nas categorias, que serão descartadas. Continuar?')) return
@@ -85,6 +91,65 @@ async function listFrom(cat) {
   <div v-if="!state.search" class="empty-state">Lendo a configuração de busca…</div>
   <template v-else>
     <p v-if="state.search.error" class="callout"><Icon name="alert" :size="18" /> {{ state.search.error }}</p>
+
+    <div class="section-head">
+      <div>
+        <h2 class="section-title">Portais e sites de vagas</h2>
+        <p class="muted small">
+          Onde o /scrape procura. Com CLI, o site é consultado direto; sem CLI, entra pelas consultas
+          <code>site:</code> (busca na web), que o /scrape só usa para cobrir lacunas.
+        </p>
+      </div>
+    </div>
+
+    <div class="panel portals">
+      <div class="portal-group br">
+        <span class="flag" aria-hidden="true"></span>
+        <b>Brasil</b>
+        <span class="muted small">{{ brCount }} de {{ (state.search.regional ?? []).length }} com CLI</span>
+      </div>
+      <div v-for="s in state.search.regional ?? []" :key="s.domain" class="pref-row site-row">
+        <CompanyLogo :sources="[`https://${s.domain.replace(/^br\./, '')}/favicon.ico`]" :name="s.name" :size="28" />
+        <div class="grow">
+          <b>{{ s.name }} <span class="muted small">{{ s.domain }}</span></b>
+          <span>{{ s.note }}</span>
+        </div>
+        <template v-if="s.cli">
+          <span class="badge ok">CLI</span>
+          <label class="switch" :title="portalOf(s)?.enabled ? 'Ligado no /scrape' : 'Desligado no /scrape'">
+            <input type="checkbox" :checked="portalOf(s)?.enabled" @change="togglePortal(portalOf(s), $event.target.checked)" />
+          </label>
+        </template>
+        <template v-else>
+          <span v-if="s.listed && s.queries" class="badge" :title="`${s.queries} consulta(s) site:`">Busca na web</span>
+          <span v-else-if="s.listed" class="badge warn" title="Listado em Search Sites, mas sem consultas site:">Sem consultas</span>
+          <button v-if="!(s.listed && s.queries)" class="btn sm" @click="includeSite(s)"><Icon name="plus" :size="13" /> Incluir na busca</button>
+          <button class="btn sm" :class="{ primary: s.listed && s.queries }" title="Abre o /add-portal no Claude Code (terminal) para gerar um CLI deste site" @click="trigger('add-portal', { args: s.url })">Criar CLI</button>
+        </template>
+      </div>
+
+      <div class="portal-group">
+        <Icon name="globe" :size="14" />
+        <b>Outros portais</b>
+        <span class="muted small">CLIs internacionais e de outros mercados</span>
+      </div>
+      <div v-for="p in otherPortals" :key="p.id" class="pref-row site-row">
+        <CompanyLogo :sources="[p.domain && `https://${p.domain}/favicon.ico`]" :name="p.name" :size="28" />
+        <div class="grow">
+          <b>{{ p.name }} <span v-if="p.domain" class="muted small">{{ p.domain }}</span></b>
+          <span>{{ p.installed ? (p.description || p.id) : 'Dependências não instaladas' }}</span>
+        </div>
+        <span class="badge ok">CLI</span>
+        <label class="switch" :title="p.enabled ? 'Ligado no /scrape' : 'Desligado no /scrape'">
+          <input type="checkbox" :checked="p.enabled" @change="togglePortal(p, $event.target.checked)" />
+        </label>
+      </div>
+      <div class="pref-row site-row">
+        <span class="add-portal-icon"><Icon name="plus" :size="16" /></span>
+        <div class="grow"><b>Novo portal</b><span>Gera um CLI para qualquer outro site de vagas (/add-portal, no terminal).</span></div>
+        <button class="btn sm" @click="trigger('add-portal')">Adicionar</button>
+      </div>
+    </div>
 
     <VocabEditor />
 
@@ -137,47 +202,6 @@ async function listFrom(cat) {
       <span>Alterações não salvas em <code>{{ state.search.file }}</code></span>
       <button class="btn ghost" @click="reset">Descartar</button>
       <button class="btn primary" :disabled="invalid" @click="save">Salvar</button>
-    </div>
-
-    <div class="section-head">
-      <div>
-        <h2 class="section-title">Sites de vagas do Brasil</h2>
-        <p class="muted small">
-          O /scrape pesquisa estes sites pelas consultas <code>site:</code> (busca na web) enquanto não houver um CLI próprio.
-          Um CLI, criado com o /add-portal, consulta o site direto e é mais completo.
-        </p>
-      </div>
-    </div>
-    <div class="panel">
-      <div v-for="s in state.search.regional ?? []" :key="s.domain" class="pref-row site-row">
-        <CompanyLogo :sources="[`https://${s.domain.replace(/^br\./, '')}/favicon.ico`]" :name="s.name" :size="28" />
-        <div class="grow">
-          <b>{{ s.name }} <span class="muted small">{{ s.domain }}</span></b>
-          <span>{{ s.note }}</span>
-        </div>
-        <span v-if="s.cli" class="badge ok">CLI instalado</span>
-        <span v-else-if="s.listed && s.queries" class="badge ok" :title="`${s.queries} consulta(s) site:`">Na busca</span>
-        <span v-else-if="s.listed" class="badge warn" title="Listado em Search Sites, mas sem consultas site:">Sem consultas</span>
-        <button v-if="!s.cli && !(s.listed && s.queries)" class="btn sm" @click="includeSite(s)"><Icon name="plus" :size="13" /> Incluir na busca</button>
-        <button v-if="!s.cli" class="btn ghost sm" title="Abre o /add-portal no Claude Code para gerar um CLI deste site" @click="trigger('add-portal', { args: s.url })">Criar CLI</button>
-      </div>
-    </div>
-
-    <h2 class="section-title">Portais</h2>
-    <div class="panel">
-      <div v-for="p in state.search.portals" :key="p.id" class="pref-row">
-        <div>
-          <b>{{ p.name }}</b>
-          <span>{{ p.installed ? (p.description || p.id) : 'Dependências não instaladas' }}</span>
-        </div>
-        <label class="switch" :title="p.enabled ? 'Ligado no /scrape' : 'Desligado no /scrape'">
-          <input type="checkbox" :checked="p.enabled" @change="togglePortal(p, $event.target.checked)" />
-        </label>
-      </div>
-      <div class="pref-row">
-        <div><b>Novo portal</b><span>Gera um CLI para outro site de vagas.</span></div>
-        <button class="btn sm" @click="trigger('add-portal')"><Icon name="plus" :size="14" /> Adicionar</button>
-      </div>
     </div>
 
     <h2 class="section-title">Filtros do /scrape</h2>

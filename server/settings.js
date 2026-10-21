@@ -113,9 +113,13 @@ function portals() {
       const { text } = readText(path.join(PORTALS, d.name, 'SKILL.md'))
       const front = text.match(/^---\n([\s\S]*?)\n---/)?.[1] ?? ''
       const desc = front.match(/^description:\s*>?\s*\n?\s*(.+)$/m)?.[1]?.trim() ?? ''
+      const ref = path.join(PORTALS, d.name, 'url-reference.md')
+      const docs = `${text}\n${fs.existsSync(ref) ? fs.readFileSync(ref, 'utf8') : ''}`
+      const host = docs.match(/https?:\/\/(?:www\.)?([a-z0-9.-]+\.[a-z]{2,})/i)?.[1] ?? null
       return {
         id: d.name,
         name: d.name.replace(/-search$/, ''),
+        domain: host && !/^(data\.|api\.|github\.com|bun\.sh)/.test(host) ? host : null,
         description: desc.replace(/^["']|["']$/g, '').slice(0, 160),
         enabled: !/^enabled:\s*false\b/m.test(front),
         installed: !fs.existsSync(path.join(PORTALS, d.name, 'cli', 'package.json')) ||
@@ -182,15 +186,23 @@ export function regionalSites(parsed) {
   const text = parsed?.text ?? ''
   const installed = portals().map((p) => {
     const files = ['SKILL.md', 'url-reference.md'].map((f) => path.join(PORTALS, p.id, f)).filter((f) => fs.existsSync(f))
-    return files.map((f) => fs.readFileSync(f, 'utf8')).join('\n')
-  }).join('\n')
+    return { ...p, text: files.map((f) => fs.readFileSync(f, 'utf8')).join('\n') }
+  })
   const searchSites = text.match(/## Search Sites[\s\S]*?(?=\n## )/)?.[0] ?? ''
-  return BR_SITES.map((s) => ({
-    ...s,
-    listed: searchSites.includes(s.domain),
-    queries: (parsed?.categories ?? []).filter((c) => c.queries.includes(`site:${s.domain}`)).length,
-    cli: installed.includes(s.domain),
-  }))
+  return BR_SITES.map((s) => {
+    // O CLI do site: de preferência o portal cujo nome lembra o domínio (gupy-search
+    // para gupy.io); senão, qualquer portal cuja documentação cite o domínio.
+    const stem = s.domain.replace(/^br\./, '').split('.')[0]
+    const portal = installed.find((p) => p.id.startsWith(stem) && p.text.includes(s.domain)) ??
+      installed.find((p) => p.text.includes(s.domain) && !/^(linkedin|freehire)-search$/.test(p.id))
+    return {
+      ...s,
+      listed: searchSites.includes(s.domain),
+      queries: (parsed?.categories ?? []).filter((c) => c.queries.includes(`site:${s.domain}`)).length,
+      cli: Boolean(portal),
+      portalId: portal?.id ?? null,
+    }
+  })
 }
 
 // Põe o site em "Search Sites" e uma consulta `site:` em cada categoria, usando o
