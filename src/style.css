@@ -451,6 +451,14 @@ button, input, select, textarea { font: inherit; color: inherit; }
 .add-portal-icon { width: 28px; height: 28px; border-radius: 22%; display: grid; place-items: center; background: var(--subtle); color: var(--text-2); flex-shrink: 0; }
 .qb-actions .muted { margin-right: auto; }
 
+/* ---------- créditos ---------- */
+.credits { display: flex; align-items: center; gap: 16px; margin-top: 48px; padding: 18px 20px; border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface); }
+.credits-pip { width: 44px; height: 44px; object-fit: contain; flex-shrink: 0; }
+.credits p { font-size: 13px; color: var(--text-2); line-height: 1.6; }
+.credits a { color: var(--accent); text-decoration: none; font-weight: 500; }
+.credits a:hover { text-decoration: underline; }
+.credits-links { display: block; margin-top: 4px; }
+
 /* ---------- logos e detalhes da vaga ---------- */
 .logo { display: inline-grid; place-items: center; flex-shrink: 0; border-radius: 22%; overflow: hidden; background: #fff; box-shadow: inset 0 0 0 1px var(--border); }
 .logo img { width: 100%; height: 100%; object-fit: contain; }

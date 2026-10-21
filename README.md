@@ -2,7 +2,7 @@
 
 <img src="https://raw.githubusercontent.com/MadsLorentzen/ai-job-search/master/assets/mascot/pip_flight_loop.gif" alt="Pip, o mascote do ai-job-search" width="120">
 
-Addon para o [ai-job-search](https://github.com/MadsLorentzen/ai-job-search): um painel local em Kanban com todas as vagas e candidaturas do seu workspace, mais botões para os comandos do projeto.
+Addon para o [ai-job-search](https://github.com/MadsLorentzen/ai-job-search), de [Mads Lorentzen](https://github.com/MadsLorentzen): um painel local em Kanban com todas as vagas e candidaturas do seu workspace, mais botões para os comandos do projeto.
 
 O addon não altera o ai-job-search. Ele lê e escreve os mesmos arquivos de estado que os comandos usam (`job_scraper/seen_jobs.json` e `job_search_tracker.csv`), e por isso pode ser instalado, atualizado ou removido de forma independente.
 
@@ -175,4 +175,16 @@ O diretório de configuração pode ser trocado com `AJS_DASHBOARD_HOME`.
 
 ## Créditos
 
-O mascote Pip pertence ao [ai-job-search](https://github.com/MadsLorentzen/ai-job-search) (licença MIT, © Mads Lorentzen). O painel não traz uma cópia: ele carrega `assets/mascot/pip_flight_loop.gif` do seu próprio workspace e, se o arquivo não existir, usa um ícone genérico.
+Este painel só existe porque existe o **[ai-job-search](https://github.com/MadsLorentzen/ai-job-search)**, criado por **[Mads Lorentzen](https://www.linkedin.com/in/mads-lorentzen/)**.
+
+O ai-job-search é o framework que faz o trabalho de verdade: o perfil (`/setup`), a busca nos portais (`/scrape`), a pontuação das vagas (`/rank`), o currículo e a carta sob medida (`/apply`), a preparação para entrevistas (`/interview`) e o registro dos resultados (`/outcome`). Os CLIs dos portais, as ferramentas em `tools/` e o formato dos arquivos que este painel lê e edita são todos dele. O addon é só uma janela visual por cima desse trabalho.
+
+Mads construiu o ai-job-search para a própria busca de emprego e o abriu para todo mundo. Nas palavras dele, foram 69 candidaturas sob medida, 20 primeiras entrevistas e um contrato assinado.
+
+- Dê uma estrela e acompanhe o projeto: https://github.com/MadsLorentzen/ai-job-search
+- Se ele te ajudou, apoie o criador: https://ko-fi.com/madslorentzen
+- Contribuições para o próprio framework vão para o repositório original (veja o `CONTRIBUTING.md` dele).
+
+O mascote **Pip** também é do ai-job-search (licença MIT, © 2026 Mads Lorentzen). O painel não traz uma cópia: ele carrega `assets/mascot/pip_flight_loop.gif` do seu próprio workspace e, se o arquivo não existir, usa um ícone genérico.
+
+O ai-job-search-dashboard é um projeto independente: não é mantido nem endossado pelo autor do ai-job-search, e nenhum dos dois é afiliado à Anthropic.

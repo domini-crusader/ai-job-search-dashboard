@@ -52,5 +52,18 @@ function refresh() {
     <ProfileSteps v-if="section === 'perfil'" @go="section = $event" />
     <SearchSettings v-else-if="section === 'busca'" />
     <EnvChecks v-else />
+
+    <footer class="credits">
+      <img v-if="!mascotFailed" :src="MASCOT_URL" alt="" class="credits-pip" />
+      <p>
+        Construído sobre o <a href="https://github.com/MadsLorentzen/ai-job-search" target="_blank" rel="noopener">ai-job-search</a>,
+        criado por <a href="https://www.linkedin.com/in/mads-lorentzen/" target="_blank" rel="noopener">Mads Lorentzen</a>.
+        O perfil, as buscas, o ranqueamento e as candidaturas são trabalho do framework dele; este painel é uma janela visual por cima.
+        <span class="credits-links">
+          <a href="https://github.com/MadsLorentzen/ai-job-search" target="_blank" rel="noopener">Dê uma estrela ao projeto</a> ·
+          <a href="https://ko-fi.com/madslorentzen" target="_blank" rel="noopener">Apoie o criador</a>
+        </span>
+      </p>
+    </footer>
   </div>
 </template>
