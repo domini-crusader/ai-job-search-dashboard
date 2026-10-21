@@ -14,7 +14,9 @@ const saving = ref(false)
 
 const view = computed(() => viewBlocks(props.section.content))
 const fileLabel = computed(() => props.section.file.split('/').pop())
-const isComment = (b) => b.type === 'raw' && /^\s*<!--[\s\S]*-->\s*$/.test(b.text)
+// "\u003C!--" em vez do literal: o scanner de dependências do Vite lê o literal
+// dentro do <script> como início de comentário HTML do SFC.
+const isComment = (b) => b.type === 'raw' && /^\s*\u003C!--[\s\S]*-->\s*$/.test(b.text)
 
 // Tabela markdown dentro do "tail" de um campo (ex.: Languages).
 function tableRows(tail) {
@@ -27,7 +29,7 @@ function textTail(tail) {
   let inComment = false
   for (const raw of tail ?? []) {
     const l = raw.trim()
-    if (inComment || l.startsWith('<!--')) { inComment = !l.includes('-->'); continue }
+    if (inComment || l.startsWith('\u003C!--')) { inComment = !l.includes('-->'); continue }
     if (l && !l.startsWith('|')) out.push(l)
   }
   return out
@@ -52,6 +54,22 @@ function splitTable(tail) {
 function joinTable(t) {
   const line = (cells) => `${t.indent}| ${cells.join(' | ')} |`
   return [line(t.header), t.sep, ...t.rows.filter((r) => r.some((c) => c.trim())).map(line), ...t.rest]
+}
+
+// Texto livre em linhas, agrupando linhas de tabela markdown numa tabela.
+function rawParts(text) {
+  const parts = []
+  for (const line of text.split('\n')) {
+    const t = line.trim()
+    if (t.startsWith('|')) {
+      if (/^\|[\s|:-]+\|$/.test(t)) continue
+      const cells = t.replace(/^\||\|$/g, '').split('|').map((c) => c.trim())
+      const last = parts[parts.length - 1]
+      if (last?.rows) last.rows.push(cells)
+      else parts.push({ rows: [cells] })
+    } else if (t) parts.push({ line: t })
+  }
+  return parts
 }
 
 function startEdit(kind) {
@@ -131,13 +149,15 @@ async function save() {
             <ul v-if="textTail(b.tail).length" class="sv-sub"><li v-for="(t, k) in textTail(b.tail)" :key="k">{{ t.replace(/^[-*]\s*/, '') }}</li></ul>
           </div>
         </div>
-        <p v-else class="sv-raw">
-          <template v-for="(line, k) in b.text.split('\n')" :key="k">
-            <b v-if="/^#{3,}\s/.test(line)" class="sv-h">{{ line.replace(/^#+\s*/, '') }}</b>
-            <span v-else><span v-for="(p, j) in inline(line.replace(/^[-*]\s+/, '• '))" :key="j" :class="{ strong: p.b }">{{ p.t }}</span></span>
-            <br v-if="k < b.text.split('\n').length - 1" />
+        <div v-else class="sv-raw">
+          <template v-for="(part, k) in rawParts(b.text)" :key="k">
+            <table v-if="part.rows" class="mini-table">
+              <tr v-for="(r, ri) in part.rows" :key="ri" :class="{ head: ri === 0 }"><td v-for="(c, ci) in r" :key="ci">{{ c }}</td></tr>
+            </table>
+            <b v-else-if="/^#{3,}\s/.test(part.line)" class="sv-h">{{ part.line.replace(/^#+\s*/, '') }}</b>
+            <div v-else><span v-for="(p, j) in inline(part.line.replace(/^[-*]\s+/, '• '))" :key="j" :class="{ strong: p.b }">{{ p.t }}</span></div>
           </template>
-        </p>
+        </div>
       </template>
     </div>
 

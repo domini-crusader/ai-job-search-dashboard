@@ -1,5 +1,5 @@
 <script setup>
-import { computed, reactive, ref } from 'vue'
+import { computed, reactive } from 'vue'
 import { state } from '../store.js'
 import Icon from './Icon.vue'
 import CompanyLogo from './CompanyLogo.vue'
@@ -7,9 +7,22 @@ import CompanyLogo from './CompanyLogo.vue'
 // Edita as consultas de uma categoria (props.category.queries, uma por linha) por tags.
 const props = defineProps({ category: Object })
 
-const vocab = computed(() => state.search?.vocab ?? { sites: [], titles: [], stacks: [], levels: [], modes: [], locations: [] })
-const pick = reactive({ titles: [], sites: [], stacks: [], levels: [], mode: '', location: '' })
-const customTitle = ref('')
+// multi: vários valores na mesma consulta; single: no máximo um; o resto (cargo, site)
+// multiplica as consultas (uma por combinação).
+const GROUPS = [
+  { key: 'titles', label: 'Cargo', kind: 'expand' },
+  { key: 'sites', label: 'Sites', kind: 'expand' },
+  { key: 'stacks', label: 'Tecnologia', kind: 'multi' },
+  { key: 'skills', label: 'Habilidades', kind: 'multi' },
+  { key: 'levels', label: 'Nível', kind: 'multi' },
+  { key: 'modes', label: 'Modalidade', kind: 'single' },
+  { key: 'locations', label: 'Local', kind: 'single' },
+  { key: 'salary', label: 'Pretensão salarial', kind: 'single', hint: 'vai para as notas da categoria' },
+]
+
+const vocab = computed(() => state.search?.vocab ?? {})
+const pick = reactive(Object.fromEntries(GROUPS.map((g) => [g.key, []])))
+const custom = reactive({})
 
 const lines = computed(() => props.category.queries.split('\n').map((l) => l.trim()).filter(Boolean))
 
@@ -28,20 +41,34 @@ function parseQuery(q) {
 }
 
 function removeLine(i) {
-  const keep = lines.value.filter((_, k) => k !== i)
-  props.category.queries = keep.join('\n')
+  props.category.queries = lines.value.filter((_, k) => k !== i).join('\n')
 }
 
 const quote = (s) => (/\s/.test(s) ? `"${s}"` : s)
-const toggle = (arr, v) => (arr.includes(v) ? arr.splice(arr.indexOf(v), 1) : arr.push(v))
+
+function toggle(g, v) {
+  const arr = pick[g.key]
+  if (arr.includes(v)) arr.splice(arr.indexOf(v), 1)
+  else if (g.kind === 'single') arr.splice(0, arr.length, v)
+  else arr.push(v)
+}
+
+// Tag digitada só para esta consulta (não entra no vocabulário salvo).
+function addCustom(g) {
+  const v = String(custom[g.key] ?? '').replace(/"/g, '').trim()
+  if (v && !pick[g.key].includes(v)) toggle(g, v)
+  custom[g.key] = ''
+}
+const options = (g) => [...new Set([...pick[g.key], ...(vocab.value[g.key] ?? [])])]
 
 const generated = computed(() => {
   if (!pick.titles.length) return []
   const sites = pick.sites.length ? pick.sites : [null]
   const tail = [
     ...pick.stacks.map((s) => `"${s}"`),
-    pick.mode && quote(pick.mode),
-    pick.location && quote(pick.location),
+    ...pick.skills.map((s) => `"${s}"`),
+    pick.modes[0] && quote(pick.modes[0]),
+    pick.locations[0] && quote(pick.locations[0]),
     pick.levels.length > 1 ? `(${pick.levels.join(' OR ')})` : pick.levels[0],
   ].filter(Boolean)
   const out = []
@@ -49,16 +76,14 @@ const generated = computed(() => {
   return out.slice(0, 24)
 })
 
-function addTitle() {
-  const t = customTitle.value.trim().replace(/"/g, '')
-  if (t && !pick.titles.includes(t)) pick.titles.push(t)
-  customTitle.value = ''
-}
-
 function apply(replace) {
   const merged = replace ? generated.value : [...new Set([...lines.value, ...generated.value])]
   props.category.queries = merged.join('\n')
-  pick.titles = []
+  if (pick.salary[0]) {
+    const notes = props.category.notes.replace(/^Pretens[ãa]o salarial:.*$/im, '').trim()
+    props.category.notes = `${notes}${notes ? '\n\n' : ''}Pretensão salarial: ${pick.salary[0]}`
+  }
+  pick.titles.splice(0)
 }
 
 const siteIcon = (s) => `https://${s.split('/')[0].replace(/^(br|www)\./, '')}/favicon.ico`
@@ -79,49 +104,18 @@ const siteIcon = (s) => `https://${s.split('/')[0].replace(/^(br|www)\./, '')}/f
     </div>
 
     <div class="qb-build">
-      <span class="field-label">Montar consultas com tags</span>
-
-      <div class="qb-row">
-        <span class="qb-label">Cargo</span>
+      <span class="field-label">Montar consultas com tags <em class="muted">(edite as opções em “Tags de busca”, acima)</em></span>
+      <div v-for="g in GROUPS" :key="g.key" class="qb-row">
+        <span class="qb-label">{{ g.label }}<em v-if="g.hint" class="qb-hint">{{ g.hint }}</em></span>
         <div class="chip-select">
-          <button v-for="t in pick.titles" :key="t" type="button" class="fchip toggle on" @click="toggle(pick.titles, t)">{{ t }} ✕</button>
-          <input v-model="customTitle" class="input chip-input" list="qb-titles" placeholder="Cargo… (Enter)" @keydown.enter.prevent="addTitle" @change="addTitle" />
-          <datalist id="qb-titles"><option v-for="t in vocab.titles" :key="t" :value="t" /></datalist>
-        </div>
-      </div>
-      <div class="qb-row">
-        <span class="qb-label">Sites</span>
-        <div class="chip-select">
-          <button v-for="s in vocab.sites" :key="s" type="button" class="fchip toggle" :class="{ on: pick.sites.includes(s) }" @click="toggle(pick.sites, s)">{{ s }}</button>
-        </div>
-      </div>
-      <div class="qb-row">
-        <span class="qb-label">Tecnologia</span>
-        <div class="chip-select">
-          <button v-for="s in vocab.stacks" :key="s" type="button" class="fchip toggle" :class="{ on: pick.stacks.includes(s) }" @click="toggle(pick.stacks, s)">{{ s }}</button>
-        </div>
-      </div>
-      <div class="qb-row">
-        <span class="qb-label">Nível</span>
-        <div class="chip-select">
-          <button v-for="s in vocab.levels" :key="s" type="button" class="fchip toggle" :class="{ on: pick.levels.includes(s) }" @click="toggle(pick.levels, s)">{{ s }}</button>
-        </div>
-      </div>
-      <div class="qb-row">
-        <span class="qb-label">Modalidade</span>
-        <div class="chip-select">
-          <button v-for="s in vocab.modes" :key="s" type="button" class="fchip toggle" :class="{ on: pick.mode === s }" @click="pick.mode = pick.mode === s ? '' : s">{{ s }}</button>
-        </div>
-      </div>
-      <div class="qb-row">
-        <span class="qb-label">Local</span>
-        <div class="chip-select">
-          <button v-for="s in vocab.locations" :key="s" type="button" class="fchip toggle" :class="{ on: pick.location === s }" @click="pick.location = pick.location === s ? '' : s">{{ s }}</button>
+          <button v-for="s in options(g)" :key="s" type="button" class="fchip toggle" :class="{ on: pick[g.key].includes(s) }" @click="toggle(g, s)">{{ s }}</button>
+          <input v-model="custom[g.key]" class="input chip-input" :placeholder="`outro ${g.label.toLowerCase()}…`" @keydown.enter.prevent="addCustom(g)" />
         </div>
       </div>
 
       <div v-if="generated.length" class="qb-preview">
-        <code v-for="g in generated" :key="g">{{ g }}</code>
+        <code v-for="q in generated" :key="q">{{ q }}</code>
+        <code v-if="pick.salary[0]" class="note">notas: Pretensão salarial: {{ pick.salary[0] }}</code>
         <div class="qb-actions">
           <span class="muted small">{{ generated.length }} consulta(s)</span>
           <button type="button" class="btn ghost sm" @click="apply(true)">Substituir todas</button>

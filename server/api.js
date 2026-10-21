@@ -8,7 +8,8 @@ import { findCommand, publicCatalog, claudeBin, pdfFor } from './commands.js'
 import { health } from './health.js'
 import { jobDetails, brief } from './enrich.js'
 import { profileReport, stepSections, saveSection } from './profile.js'
-import { searchSettings, saveCategories, saveDays, setPortalEnabled, readLists, writeLists, writeText, readText } from './settings.js'
+import { searchSettings, saveCategories, saveDays, setPortalEnabled, readLists, writeLists, writeText, readText, writeVocab, resetVocab, includeSite } from './settings.js'
+import { generateVocab } from './generate.js'
 
 const running = new Map() // id do comando -> processo filho em execução
 const sseClients = new Set()
@@ -62,14 +63,25 @@ function launchClaude(prompt) {
   if (!bin) throw httpError(501, 'CLI `claude` não encontrado no PATH (ou defina CLAUDE_BIN)')
   if (process.platform !== 'win32') throw httpError(501, 'abertura de terminal só implementada no Windows')
   // Os valores vão por variável de ambiente para não passarem pelo parser do PowerShell.
-  const child = spawn('powershell.exe', [
-    '-NoProfile', '-NonInteractive', '-Command',
-    'Start-Process -FilePath $env:JD_CLAUDE -ArgumentList $env:JD_ARGS -WorkingDirectory $env:JD_CWD',
-  ], {
-    env: { ...process.env, JD_CLAUDE: bin, JD_ARGS: winQuote(prompt), JD_CWD: ROOT },
-    windowsHide: true, detached: true, stdio: 'ignore',
+  // Sem `detached`: um PowerShell destacado fica sem console e o Start-Process falha
+  // em silêncio. A saída ("started"/"ERRO") é lida para a falha chegar à tela.
+  return new Promise((resolve, reject) => {
+    const child = spawn('powershell.exe', [
+      '-NoProfile', '-NonInteractive', '-Command',
+      'try { $p = Start-Process -FilePath $env:JD_CLAUDE -ArgumentList $env:JD_ARGS -WorkingDirectory $env:JD_CWD -PassThru; "started " + $p.Id } catch { "ERRO: " + $_ }',
+    ], {
+      env: { ...process.env, JD_CLAUDE: bin, JD_ARGS: winQuote(prompt), JD_CWD: ROOT },
+      windowsHide: true,
+    })
+    let out = ''
+    child.stdout.on('data', (d) => { out += d })
+    child.stderr.on('data', (d) => { out += d })
+    child.on('error', (e) => reject(httpError(500, `não foi possível abrir o terminal: ${e.message}`)))
+    child.on('close', () => {
+      if (/^started \d+/m.test(out)) resolve()
+      else reject(httpError(500, `não foi possível abrir o terminal: ${out.replace(/^ERRO:\s*/, '').trim().slice(0, 200) || 'erro desconhecido'}`))
+    })
   })
-  child.unref()
 }
 
 async function runCommand(req, res, body) {
@@ -167,6 +179,22 @@ async function handle(req, res) {
       return send(res, 200, searchSettings())
     }
 
+    case 'PUT /api/settings/vocab': {
+      const body = await readJson(req)
+      if (body.reset) resetVocab()
+      else writeVocab(body.groups)
+      return send(res, 200, searchSettings())
+    }
+
+    case 'POST /api/settings/vocab/generate':
+      return send(res, 200, await generateVocab())
+
+    case 'PUT /api/settings/site': {
+      const body = await readJson(req)
+      includeSite(String(body.domain || ''))
+      return send(res, 200, searchSettings())
+    }
+
     case 'PUT /api/settings/portal': {
       const body = await readJson(req)
       setPortalEnabled(body.id, body.enabled === true)
@@ -223,7 +251,7 @@ async function handle(req, res) {
         if (p.required && !String(params[p.name] ?? '').trim()) throw httpError(400, `preencha: ${p.label}`)
       }
       const prompt = command.prompt(params)
-      if (body.launch) launchClaude(prompt)
+      if (body.launch) await launchClaude(prompt)
       return send(res, 200, { prompt, launched: Boolean(body.launch) })
     }
 

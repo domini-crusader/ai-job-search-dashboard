@@ -146,22 +146,146 @@ function vocabulary(parsed) {
   } catch { /* sem CLAUDE.md */ }
   // Termo de uma palavra entre aspas (".NET", "AWS") é tecnologia, não cargo.
   const single = titles.filter((t) => !/\s/.test(t))
+  // Domínios dos portais instalados (.agents/skills/*/SKILL.md e url-reference.md).
+  const portalSites = portals().flatMap((p) => {
+    const files = ['SKILL.md', 'url-reference.md'].map((f) => path.join(PORTALS, p.id, f)).filter((f) => fs.existsSync(f))
+    const text = files.map((f) => fs.readFileSync(f, 'utf8')).join('\n')
+    const host = text.match(/https?:\/\/(?:www\.)?([a-z0-9.-]+\.[a-z]{2,})/i)?.[1]
+    return host && !/^(data\.|api\.|github\.com|bun\.sh)/.test(host) ? [host] : []
+  })
   return {
-    sites: sites.filter((s) => /^[a-z0-9-]+(\.[a-z0-9-]+)+(\/\S*)?$/i.test(s)),
+    sites: uniq([...sites, ...portalSites]).filter((s) => /^[a-z0-9-]+(\.[a-z0-9-]+)+(\/\S*)?$/i.test(s)),
     titles: titles.filter((t) => /\s/.test(t)).slice(0, 60),
     stacks: uniq([...single, ...primary]).slice(0, 20),
-    levels: ['Júnior', 'Pleno', 'Sênior', 'Especialista', 'Tech Lead', 'Staff', 'Senior', 'Lead'],
-    modes: ['remoto', 'remote', '100% remoto', 'home office', 'híbrido'],
-    locations: ['Brasil', 'Brazil', 'LATAM', 'Remote', 'São Paulo'],
   }
+}
+
+// ---------- sites regionais (Brasil) ----------
+// O /scrape usa os CLIs de .agents/skills/ e, para os sites listados em "Search Sites"
+// sem CLI, roda as consultas `site:` via WebSearch (job-scraper/SKILL.md, passo 1c).
+// "Incluir na busca" usa esse caminho; "Criar CLI" abre o /add-portal.
+
+export const BR_SITES = [
+  { domain: 'gupy.io', name: 'Gupy', url: 'https://portal.gupy.io', note: 'Maior ATS de empresas brasileiras' },
+  { domain: 'vagas.com.br', name: 'Vagas.com.br', url: 'https://www.vagas.com.br', note: 'Um dos maiores sites de vagas do país' },
+  { domain: 'catho.com.br', name: 'Catho', url: 'https://www.catho.com.br', note: 'Site tradicional, muitas vagas CLT' },
+  { domain: 'infojobs.com.br', name: 'InfoJobs', url: 'https://www.infojobs.com.br', note: 'Generalista, todas as áreas' },
+  { domain: 'programathor.com.br', name: 'ProgramaThor', url: 'https://programathor.com.br', note: 'Vagas de tecnologia' },
+  { domain: 'trampos.co', name: 'Trampos', url: 'https://trampos.co', note: 'Tecnologia, design e marketing' },
+  { domain: 'geekhunter.com.br', name: 'GeekHunter', url: 'https://www.geekhunter.com.br', note: 'Tecnologia, com faixa salarial' },
+  { domain: 'remotar.com.br', name: 'Remotar', url: 'https://remotar.com.br', note: 'Só vagas remotas' },
+  { domain: 'br.indeed.com', name: 'Indeed Brasil', url: 'https://br.indeed.com', note: 'Agregador com vagas de vários sites' },
+  { domain: 'glassdoor.com.br', name: 'Glassdoor Brasil', url: 'https://www.glassdoor.com.br', note: 'Vagas com avaliações das empresas' },
+]
+
+export function regionalSites(parsed) {
+  const text = parsed?.text ?? ''
+  const installed = portals().map((p) => {
+    const files = ['SKILL.md', 'url-reference.md'].map((f) => path.join(PORTALS, p.id, f)).filter((f) => fs.existsSync(f))
+    return files.map((f) => fs.readFileSync(f, 'utf8')).join('\n')
+  }).join('\n')
+  const searchSites = text.match(/## Search Sites[\s\S]*?(?=\n## )/)?.[0] ?? ''
+  return BR_SITES.map((s) => ({
+    ...s,
+    listed: searchSites.includes(s.domain),
+    queries: (parsed?.categories ?? []).filter((c) => c.queries.includes(`site:${s.domain}`)).length,
+    cli: installed.includes(s.domain),
+  }))
+}
+
+// Põe o site em "Search Sites" e uma consulta `site:` em cada categoria, usando o
+// primeiro cargo entre aspas e o termo de modalidade que a categoria já usa.
+export function includeSite(domain) {
+  const site = BR_SITES.find((s) => s.domain === domain)
+  if (!site) throw httpError(400, 'site desconhecido')
+  const q = parseQueries()
+  const categories = q.categories.map((c) => {
+    if (c.queries.includes(`site:${domain}`)) return c
+    const term = c.queries.match(/"([^"]+)"/)?.[1]
+    if (!term) return c
+    const mode = c.queries.match(/\b(remoto|remote|h[íi]brido|hybrid)\b/i)?.[1]
+    return { ...c, queries: `${c.queries}\nsite:${domain} "${term}"${mode ? ` ${mode}` : ''}`.trim() }
+  })
+  let text = q.text.slice(0, q.bodyStart) + renderCategories(q.intro, categories) + q.text.slice(q.bodyEnd)
+  const bullet = `- **${domain}** - ${site.note}`
+  const sec = text.match(/## Search Sites\n[\s\S]*?(?=\n## )/)
+  if (sec && !sec[0].includes(domain)) {
+    text = text.replace(sec[0], `${sec[0].replace(/\s+$/, '')}\n${bullet}\n`)
+  } else if (!sec) {
+    text = text.replace(/^## Query Categories/m, `## Search Sites\n\n${bullet}\n\n## Query Categories`)
+  }
+  writeText(QUERIES, text, q.eol)
+}
+
+// ---------- vocabulário de tags (editável) ----------
+// Padrão genérico, pensado para qualquer pessoa e mercado que o ai-job-search cobre
+// (CLIs globais, portais dinamarqueses, ATS comuns, buscas `site:`), somado ao que
+// já existe no workspace. Depois de salvo, vale só o que a pessoa escolheu.
+
+export const VOCAB_GROUPS = ['titles', 'sites', 'stacks', 'skills', 'levels', 'modes', 'locations', 'salary']
+
+const DEFAULT_VOCAB = {
+  titles: ['Software Engineer', 'Desenvolvedor Back-end', 'Desenvolvedor Front-end', 'Desenvolvedor Full Stack',
+    'Mobile Developer', 'Data Engineer', 'Data Scientist', 'Data Analyst', 'ML Engineer', 'DevOps Engineer',
+    'Site Reliability Engineer', 'QA Engineer', 'Tech Lead', 'Engineering Manager', 'Product Manager',
+    'Product Designer', 'UX Designer', 'Business Analyst', 'Project Manager', 'Solutions Architect'],
+  sites: ['linkedin.com/jobs', 'indeed.com', 'glassdoor.com', 'boards.greenhouse.io', 'jobs.lever.co', 'jobs.ashbyhq.com',
+    'gupy.io', 'programathor.com.br', 'vagas.com.br', 'catho.com.br', 'infojobs.com.br', 'trampos.co', 'geekhunter.com.br', 'remotar.com.br', 'weworkremotely.com', 'remoteok.com', 'remotive.com',
+    'wellfound.com', 'freehire.me', 'jobindex.dk', 'stepstone.de', 'welcometothejungle.com'],
+  stacks: ['Java', 'Python', 'JavaScript', 'TypeScript', 'C#', '.NET', 'Go', 'Kotlin', 'Swift', 'PHP', 'Ruby', 'Rust',
+    'React', 'Angular', 'Vue', 'Node.js', 'Spring', 'Django', 'SQL', 'PostgreSQL', 'MongoDB', 'AWS', 'Azure', 'GCP',
+    'Docker', 'Kubernetes', 'Terraform', 'Kafka'],
+  skills: ['Arquitetura de software', 'Microsserviços', 'APIs REST', 'Machine Learning', 'Testes automatizados',
+    'CI/CD', 'Segurança', 'Observabilidade', 'Agile / Scrum', 'Liderança', 'Comunicação', 'Inglês'],
+  levels: ['Estágio', 'Júnior', 'Pleno', 'Sênior', 'Especialista', 'Tech Lead', 'Staff', 'Principal', 'Gerente',
+    'Junior', 'Mid-level', 'Senior', 'Lead'],
+  modes: ['remoto', '100% remoto', 'home office', 'híbrido', 'presencial', 'remote', 'hybrid', 'on-site'],
+  locations: ['Brasil', 'Brazil', 'LATAM', 'Portugal', 'Europe', 'USA', 'Remote', 'Worldwide', 'Denmark', 'São Paulo'],
+  salary: ['A combinar', 'até R$ 8.000', 'R$ 8.000 – 12.000', 'R$ 12.000 – 18.000', 'R$ 18.000+', 'US$ 3.000+/mês',
+    'US$ 6.000+/mês', '€ 50.000+/ano'],
+}
+
+const VOCAB_FILE = path.join(CONFIG_DIR, `vocab-${WS_ID}.json`)
+const uniqTags = (arr) => [...new Map(arr.map((s) => [String(s).trim().toLowerCase(), String(s).trim()])).values()].filter(Boolean)
+
+export function readVocab(parsed) {
+  try {
+    const saved = JSON.parse(fs.readFileSync(VOCAB_FILE, 'utf8'))
+    return { custom: true, groups: Object.fromEntries(VOCAB_GROUPS.map((g) => [g, saved[g] ?? []])) }
+  } catch { /* sem vocabulário salvo: padrão + workspace */ }
+  const derived = vocabulary(parsed)
+  return {
+    custom: false,
+    groups: Object.fromEntries(VOCAB_GROUPS.map((g) => [g, uniqTags([...(derived[g] ?? []), ...DEFAULT_VOCAB[g]])])),
+  }
+}
+
+export function cleanVocab(groups) {
+  if (!groups || typeof groups !== 'object') throw httpError(400, 'tags inválidas')
+  return Object.fromEntries(VOCAB_GROUPS.map((g) => {
+    const list = Array.isArray(groups[g]) ? groups[g] : []
+    return [g, uniqTags(list.map((t) => String(t).replace(/["\r\n]/g, '').trim().slice(0, 80))).slice(0, 150)]
+  }))
+}
+
+export function writeVocab(groups) {
+  fs.mkdirSync(CONFIG_DIR, { recursive: true })
+  fs.writeFileSync(VOCAB_FILE, JSON.stringify(cleanVocab(groups), null, 2), 'utf8')
+}
+
+export function resetVocab() {
+  fs.rmSync(VOCAB_FILE, { force: true })
 }
 
 export function searchSettings() {
   let parsed = null
   let error = null
   try { parsed = parseQueries() } catch (e) { error = e.message }
+  const vocab = readVocab(parsed)
   return {
-    vocab: vocabulary(parsed),
+    vocab: vocab.groups,
+    vocabCustom: vocab.custom,
+    regional: regionalSites(parsed),
     file: path.relative(ROOT, QUERIES).replace(/\\/g, '/'),
     error,
     days: parsed?.days ?? null,

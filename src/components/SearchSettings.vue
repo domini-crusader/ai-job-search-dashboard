@@ -1,8 +1,10 @@
 <script setup>
 import { computed, ref, watch } from 'vue'
-import { state, saveCategories, saveDays, togglePortal, saveLists, goTo, toast, trigger } from '../store.js'
+import { state, saveCategories, saveDays, togglePortal, saveLists, goTo, toast, trigger, apiPut, loadProfile } from '../store.js'
 import Icon from './Icon.vue'
 import QueryBuilder from './QueryBuilder.vue'
+import VocabEditor from './VocabEditor.vue'
+import CompanyLogo from './CompanyLogo.vue'
 
 // Rascunho local das categorias; só vai para o search-queries.md ao salvar.
 const draft = ref([])
@@ -45,6 +47,17 @@ function remove(i) {
     draft.value = draft.value.filter((_, k) => k !== i)
   }
 }
+// Inclui um site brasileiro no search-queries.md (Search Sites + uma consulta site: por categoria).
+async function includeSite(site) {
+  if (dirty.value && !confirm('Há alterações não salvas nas categorias, que serão descartadas. Continuar?')) return
+  const res = await apiPut('/api/settings/site', { domain: site.domain })
+  if (res) {
+    state.search = res
+    toast(`${site.name} incluído na busca do /scrape`, 'ok')
+    loadProfile()
+  }
+}
+
 async function save() {
   if (await saveCategories(strip(draft.value))) open.value = null
 }
@@ -72,6 +85,8 @@ async function listFrom(cat) {
   <div v-if="!state.search" class="empty-state">Lendo a configuração de busca…</div>
   <template v-else>
     <p v-if="state.search.error" class="callout"><Icon name="alert" :size="18" /> {{ state.search.error }}</p>
+
+    <VocabEditor />
 
     <div class="section-head">
       <div>
@@ -122,6 +137,30 @@ async function listFrom(cat) {
       <span>Alterações não salvas em <code>{{ state.search.file }}</code></span>
       <button class="btn ghost" @click="reset">Descartar</button>
       <button class="btn primary" :disabled="invalid" @click="save">Salvar</button>
+    </div>
+
+    <div class="section-head">
+      <div>
+        <h2 class="section-title">Sites de vagas do Brasil</h2>
+        <p class="muted small">
+          O /scrape pesquisa estes sites pelas consultas <code>site:</code> (busca na web) enquanto não houver um CLI próprio.
+          Um CLI, criado com o /add-portal, consulta o site direto e é mais completo.
+        </p>
+      </div>
+    </div>
+    <div class="panel">
+      <div v-for="s in state.search.regional ?? []" :key="s.domain" class="pref-row site-row">
+        <CompanyLogo :sources="[`https://${s.domain.replace(/^br\./, '')}/favicon.ico`]" :name="s.name" :size="28" />
+        <div class="grow">
+          <b>{{ s.name }} <span class="muted small">{{ s.domain }}</span></b>
+          <span>{{ s.note }}</span>
+        </div>
+        <span v-if="s.cli" class="badge ok">CLI instalado</span>
+        <span v-else-if="s.listed && s.queries" class="badge ok" :title="`${s.queries} consulta(s) site:`">Na busca</span>
+        <span v-else-if="s.listed" class="badge warn" title="Listado em Search Sites, mas sem consultas site:">Sem consultas</span>
+        <button v-if="!s.cli && !(s.listed && s.queries)" class="btn sm" @click="includeSite(s)"><Icon name="plus" :size="13" /> Incluir na busca</button>
+        <button v-if="!s.cli" class="btn ghost sm" title="Abre o /add-portal no Claude Code para gerar um CLI deste site" @click="trigger('add-portal', { args: s.url })">Criar CLI</button>
+      </div>
     </div>
 
     <h2 class="section-title">Portais</h2>
