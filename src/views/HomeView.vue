@@ -63,6 +63,9 @@ function refresh() {
           <a href="https://github.com/MadsLorentzen/ai-job-search" target="_blank" rel="noopener">Dê uma estrela ao projeto</a> ·
           <a href="https://ko-fi.com/madslorentzen" target="_blank" rel="noopener">Apoie o criador</a>
         </span>
+        <span class="credits-own">
+          Painel por <a href="https://github.com/domini-crusader/ai-job-search-dashboard" target="_blank" rel="noopener">DominiCrusader</a>
+        </span>
       </p>
     </footer>
   </div>

@@ -188,3 +188,5 @@ Mads construiu o ai-job-search para a própria busca de emprego e o abriu para t
 O mascote **Pip** também é do ai-job-search (licença MIT, © 2026 Mads Lorentzen). O painel não traz uma cópia: ele carrega `assets/mascot/pip_flight_loop.gif` do seu próprio workspace e, se o arquivo não existir, usa um ícone genérico.
 
 O ai-job-search-dashboard é um projeto independente: não é mantido nem endossado pelo autor do ai-job-search, e nenhum dos dois é afiliado à Anthropic.
+
+O painel em si é feito por [DominiCrusader](https://github.com/domini-crusader), em [domini-crusader/ai-job-search-dashboard](https://github.com/domini-crusader/ai-job-search-dashboard). Sugestões e problemas do painel vão para as issues de lá.
