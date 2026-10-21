@@ -12,6 +12,8 @@ const SECTIONS = [
   { id: 'ambiente', label: 'Ambiente' },
 ]
 const section = ref('perfil')
+const mascotFailed = ref(false)
+const MASCOT_URL = '/api/brand/mascot'
 
 const firstName = computed(() => state.profile?.name?.split(' ')[0])
 const progress = computed(() => {
@@ -29,7 +31,8 @@ function refresh() {
 <template>
   <div class="page">
     <header class="page-head home-head">
-      <div>
+      <img v-if="!mascotFailed" class="home-mascot" :src="MASCOT_URL" alt="Pip, o mascote do ai-job-search" @error="mascotFailed = true" />
+      <div class="grow">
         <h1>{{ firstName ? `Olá, ${firstName}` : 'Configuração inicial' }}</h1>
         <p v-if="state.profile">
           Perfil {{ state.profile.summary.done }} de {{ state.profile.summary.total }} etapas completas

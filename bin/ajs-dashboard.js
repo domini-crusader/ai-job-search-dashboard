@@ -9,7 +9,7 @@ import { fileURLToPath } from 'node:url'
 const ADDON_DIR = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
 const pkg = JSON.parse(fs.readFileSync(path.join(ADDON_DIR, 'package.json'), 'utf8'))
 
-const HELP = `ajs-dashboard ${pkg.version} - Painel Kanban para o ai-job-search
+const HELP = `ai-job-search-dashboard ${pkg.version} - Painel Kanban para o ai-job-search
 
 Uso:
   ajs-dashboard [--root <pasta>] [--port <n>] [--no-open]
@@ -55,7 +55,7 @@ process.env.AJS_ROOT = root
 const { createServer } = await import('vite')
 const server = await createServer({ configFile: path.join(ADDON_DIR, 'vite.config.js') })
 await server.listen()
-console.log(`\n  Painel de Vagas ${pkg.version}`)
+console.log(`\n  ai-job-search-dashboard ${pkg.version}`)
 console.log(`  workspace: ${root}`)
 server.printUrls()
 console.log('\n  Ctrl+C para encerrar\n')

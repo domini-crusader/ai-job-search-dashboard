@@ -5,6 +5,7 @@
   "type": "module",
   "private": true,
   "bin": {
+    "ai-job-search-dashboard": "bin/ajs-dashboard.js",
     "ajs-dashboard": "bin/ajs-dashboard.js"
   },
   "files": [

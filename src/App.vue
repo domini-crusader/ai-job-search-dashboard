@@ -1,5 +1,5 @@
 <script setup>
-import { computed, onMounted } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import {
   state, goTo, savePrefs, dismissToast,
   loadBoard, loadCatalog, loadHealth, loadProfile, loadSearch, loadLists, watchChanges,
@@ -21,6 +21,10 @@ const setupPending = computed(() => {
   const p = state.profile?.summary
   return (p && p.done < p.total) || (state.health?.summary.blocking ?? 0) > 0
 })
+// Sem o mascote no workspace (fork antigo, por exemplo), volta ao ícone.
+const logoFailed = ref(false)
+// Ligado com :src para o Vue não tentar resolver a rota da API como import.
+const MASCOT_URL = '/api/brand/mascot'
 const running = computed(() => state.runs.some((r) => r.status === 'running'))
 
 const THEMES = ['system', 'light', 'dark']
@@ -42,8 +46,9 @@ onMounted(async () => {
   <div class="app">
     <header class="topbar">
       <div class="brand">
-        <div class="brand-mark"><Icon name="board" :size="16" /></div>
-        <span class="brand-name">Painel de Vagas</span>
+        <img v-if="!logoFailed" class="brand-logo" :src="MASCOT_URL" alt="" @error="logoFailed = true" />
+        <div v-else class="brand-mark"><Icon name="board" :size="16" /></div>
+        <span class="brand-name">ai-job-search<span class="brand-suffix">-dashboard</span></span>
       </div>
 
       <nav class="tabs" aria-label="Seções">

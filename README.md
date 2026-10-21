@@ -1,5 +1,7 @@
 # ai-job-search-dashboard
 
+<img src="https://raw.githubusercontent.com/MadsLorentzen/ai-job-search/master/assets/mascot/pip_flight_loop.gif" alt="Pip, o mascote do ai-job-search" width="120">
+
 Addon para o [ai-job-search](https://github.com/MadsLorentzen/ai-job-search): um painel local em Kanban com todas as vagas e candidaturas do seu workspace, mais botões para os comandos do projeto.
 
 O addon não altera o ai-job-search. Ele lê e escreve os mesmos arquivos de estado que os comandos usam (`job_scraper/seen_jobs.json` e `job_search_tracker.csv`), e por isso pode ser instalado, atualizado ou removido de forma independente.
@@ -22,13 +24,13 @@ npm install -g github:<usuario>/ai-job-search-dashboard
 Depois, de dentro da pasta do ai-job-search:
 
 ```bash
-ajs-dashboard
+ai-job-search-dashboard
 ```
 
-O workspace é detectado a partir da pasta atual (ou de um dos pais). De qualquer outro lugar, informe o caminho:
+`ajs-dashboard` é um atalho para o mesmo comando. O workspace é detectado a partir da pasta atual (ou de um dos pais). De qualquer outro lugar, informe o caminho:
 
 ```bash
-ajs-dashboard --root C:\Projetos\ai-job-search
+ai-job-search-dashboard --root C:\Projetos\ai-job-search
 ```
 
 Atualizar: rode o mesmo `npm install -g` de novo. Remover: `npm uninstall -g ai-job-search-dashboard`.
@@ -136,3 +138,7 @@ Estrutura:
 - `src/`: o app Vue (`views/` com uma tela por aba e `components/`).
 
 O diretório de configuração pode ser trocado com `AJS_DASHBOARD_HOME`.
+
+## Créditos
+
+O mascote Pip pertence ao [ai-job-search](https://github.com/MadsLorentzen/ai-job-search) (licença MIT, © Mads Lorentzen). O painel não traz uma cópia: ele carrega `assets/mascot/pip_flight_loop.gif` do seu próprio workspace e, se o arquivo não existir, usa um ícone genérico.

@@ -1,6 +1,7 @@
 // Plugin do Vite que serve a API local do painel em /api/*.
 // Roda dentro do `npm run dev` - não há um segundo processo para subir.
 import fs from 'node:fs'
+import path from 'node:path'
 import { spawn } from 'node:child_process'
 import { ROOT, SEEN, TRACKER, loadBoard, setSeenStatus, setTrackerStatus, httpError } from './data.js'
 import { findCommand, publicCatalog, claudeBin, pdfFor } from './commands.js'
@@ -157,6 +158,14 @@ async function handle(req, res) {
 
     case 'PUT /api/lists':
       return send(res, 200, writeLists(await readJson(req)))
+
+    // Mascote oficial (Pip, MIT) lido do próprio workspace: o addon não o redistribui.
+    case 'GET /api/brand/mascot': {
+      const file = path.join(ROOT, 'assets', 'mascot', 'pip_flight_loop.gif')
+      if (!fs.existsSync(file)) throw httpError(404, 'mascote não encontrado no workspace')
+      res.writeHead(200, { 'Content-Type': 'image/gif', 'Cache-Control': 'max-age=3600' })
+      return fs.createReadStream(file).pipe(res)
+    }
 
     case 'GET /api/catalog':
       return send(res, 200, publicCatalog())
