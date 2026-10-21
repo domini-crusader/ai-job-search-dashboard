@@ -116,6 +116,8 @@ export async function loadHealth() {
 export function watchChanges() {
   const es = new EventSource('/api/events')
   es.addEventListener('changed', () => loadBoard())
+  // Ao voltar para a aba (por exemplo, depois de logar no terminal), reconsulta o login.
+  window.addEventListener('focus', () => { if (state.catalog.claudeCli) loadCatalog() })
 }
 
 export async function setStatus(card, status) {
@@ -148,9 +150,26 @@ async function copyText(text) {
 // Comandos do Claude Code: copia o slash command ou abre o CLI num terminal.
 export async function claudeCommand(id, params = {}, launch = false) {
   try {
-    const { prompt } = await api('/api/claude', { method: 'POST', body: { id, params, launch } })
+    const res = await fetch('/api/claude', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-Dashboard': '1' },
+      body: JSON.stringify({ id, params, launch }),
+    })
+    const data = await res.json().catch(() => ({}))
+    // CLI sem login: copia o comando (cola-se no app do Claude) e oferece o login.
+    if (res.status === 409 && data.code === 'login') {
+      await copyText(data.prompt)
+      state.catalog.claudeLoggedIn = false
+      toast(`O Claude Code do terminal não está logado. ${data.prompt} foi copiado — cole no app do Claude, ou faça login para rodar daqui.`,
+        'error', { label: 'Fazer login', run: () => claudeCommand('login', {}, true) })
+      return false
+    }
+    if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`)
+    const { prompt } = data
     if (launch) {
-      toast(`Abrindo o Claude Code com ${prompt}`, 'ok')
+      toast(id === 'login'
+        ? 'Abrindo o Claude Code: entre na sua conta na janela do terminal e depois volte aqui'
+        : `Abrindo o Claude Code com ${prompt} numa janela do terminal`, 'ok')
     } else {
       await copyText(prompt)
       toast(`Copiado: ${prompt} — cole no Claude Code`, 'ok')

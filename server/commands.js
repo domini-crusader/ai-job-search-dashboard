@@ -8,8 +8,26 @@
 //             o CLI `claude` está no PATH (ou em CLAUDE_BIN), abre um terminal
 import fs from 'node:fs'
 import path from 'node:path'
-import { spawnSync } from 'node:child_process'
+import { spawnSync, execFile } from 'node:child_process'
 import { ROOT, trackerRow, httpError } from './data.js'
+
+// Login do CLI: sem ele, a sessão aberta no terminal para na tela de login e o
+// comando nunca roda. O login do app desktop não vale para o CLI.
+let authCache = { at: 0, value: null }
+export function claudeLoggedIn({ fresh = false } = {}) {
+  const bin = claudeBin()
+  if (!bin) return Promise.resolve(null)
+  if (!fresh && Date.now() - authCache.at < 20000) return Promise.resolve(authCache.value)
+  return new Promise((resolve) => {
+    execFile(bin, ['auth', 'status'], { timeout: 15000, windowsHide: true, encoding: 'utf8', shell: /\.cmd$/i.test(bin) },
+      (err, stdout) => {
+        let value = null
+        try { value = Boolean(JSON.parse(stdout).loggedIn) } catch { /* saída inesperada: desconhecido */ }
+        authCache = { at: Date.now(), value }
+        resolve(value)
+      })
+  })
+}
 
 // ---------- descoberta de executáveis ----------
 
@@ -223,10 +241,11 @@ export function findCommand(id) {
   return c
 }
 
-export function publicCatalog() {
+export async function publicCatalog() {
   return {
     workspace: ROOT,
     claudeCli: Boolean(claudeBin()),
+    claudeLoggedIn: await claudeLoggedIn(),
     python: python() ? [python().cmd, ...python().pre].join(' ') : null,
     groups: GROUPS,
     commands: COMMANDS.map(({ build, prompt, ...rest }) => rest),

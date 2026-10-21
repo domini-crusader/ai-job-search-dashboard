@@ -4,7 +4,7 @@ import fs from 'node:fs'
 import path from 'node:path'
 import { spawn } from 'node:child_process'
 import { ROOT, SEEN, TRACKER, loadBoard, setSeenStatus, setTrackerStatus, httpError } from './data.js'
-import { findCommand, publicCatalog, claudeBin, pdfFor } from './commands.js'
+import { findCommand, publicCatalog, claudeBin, claudeLoggedIn, pdfFor } from './commands.js'
 import { health } from './health.js'
 import { jobDetails, brief } from './enrich.js'
 import { profileReport, stepSections, saveSection } from './profile.js'
@@ -216,7 +216,7 @@ async function handle(req, res) {
     }
 
     case 'GET /api/catalog':
-      return send(res, 200, publicCatalog())
+      return send(res, 200, await publicCatalog())
 
     case 'GET /api/events': {
       res.writeHead(200, { 'Content-Type': 'text/event-stream', 'Cache-Control': 'no-store', Connection: 'keep-alive' })
@@ -251,6 +251,10 @@ async function handle(req, res) {
         if (p.required && !String(params[p.name] ?? '').trim()) throw httpError(400, `preencha: ${p.label}`)
       }
       const prompt = command.prompt(params)
+      // Sem login no CLI, a janela abriria e pararia na tela de login: avisa antes.
+      if (body.launch && command.id !== 'login' && (await claudeLoggedIn({ fresh: true })) === false) {
+        return send(res, 409, { error: 'O Claude Code do terminal ainda não está logado', code: 'login', prompt })
+      }
       if (body.launch) await launchClaude(prompt)
       return send(res, 200, { prompt, launched: Boolean(body.launch) })
     }

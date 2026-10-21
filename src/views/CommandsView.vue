@@ -36,9 +36,17 @@ function clearFinished() {
         <h1>Comandos</h1>
         <p>Um clique executa. Use <Icon name="cog" :size="13" style="display:inline;vertical-align:-2px" /> para opções.</p>
       </header>
+      <div v-if="state.catalog.claudeCli && state.catalog.claudeLoggedIn === false" class="callout">
+        <Icon name="alert" :size="18" />
+        <div>
+          <b>O Claude Code do terminal ainda não está logado</b>
+          <p>Até fazer login, os botões do Claude copiam o comando para você colar no app. O login do app desktop não vale para o terminal.</p>
+        </div>
+        <button class="btn primary" @click="trigger('login', {}, true)">Fazer login</button>
+      </div>
       <div class="hint-bar">
         <Icon name="copy" :size="14" />
-        <span v-if="state.catalog.claudeCli">Comandos do Claude abrem uma sessão do Claude Code no terminal.</span>
+        <span v-if="state.catalog.claudeCli && state.catalog.claudeLoggedIn !== false">Comandos do Claude abrem uma sessão do Claude Code no terminal.</span>
         <span v-else>Comandos do Claude são copiados — cole no Claude Code. Scripts locais rodam aqui e a saída aparece ao lado.</span>
       </div>
 
