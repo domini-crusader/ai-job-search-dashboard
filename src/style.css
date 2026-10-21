@@ -105,6 +105,14 @@ button, input, select, textarea { font: inherit; color: inherit; }
 .brand-name { font-weight: 600; font-size: 15px; letter-spacing: -0.01em; white-space: nowrap; }
 .brand-suffix { color: var(--muted); font-weight: 500; }
 .brand-logo { width: 34px; height: 34px; object-fit: contain; flex-shrink: 0; }
+.brand-icon { display: flex; flex-direction: column; align-items: center; gap: 2px; flex-shrink: 0; }
+.brand-icon .brand-logo { width: 30px; height: 30px; }
+.flag.brand-flag { width: 14px; height: 10px; border-radius: 2px; }
+.flag.brand-flag::before { inset: 1.5px 2px; }
+.flag.brand-flag::after { width: 4px; height: 4px; margin: -2px 0 0 -2px; }
+.brand-text { display: flex; flex-direction: column; line-height: 1.2; min-width: 0; }
+.brand-by { font-size: 11px; color: var(--muted); text-decoration: none; }
+.brand-by:hover { color: var(--accent); }
 .home-mascot { width: 72px; height: 72px; object-fit: contain; flex-shrink: 0; margin: -8px 4px 0 -6px; }
 .tabs { display: flex; gap: 2px; padding: 3px; background: var(--subtle); border-radius: 10px; }
 .tab {
@@ -458,8 +466,6 @@ button, input, select, textarea { font: inherit; color: inherit; }
 .credits a { color: var(--accent); text-decoration: none; font-weight: 500; }
 .credits a:hover { text-decoration: underline; }
 .credits-links { display: block; margin-top: 4px; }
-.credits-own { display: block; margin-top: 6px; font-size: 12px; color: var(--muted); }
-.credits .credits-own a { color: var(--text-2); font-weight: 500; }
 
 /* ---------- logos e detalhes da vaga ---------- */
 .logo { display: inline-grid; place-items: center; flex-shrink: 0; border-radius: 22%; overflow: hidden; background: #fff; box-shadow: inset 0 0 0 1px var(--border); }
@@ -525,7 +531,7 @@ button, input, select, textarea { font: inherit; color: inherit; }
 }
 @media (max-width: 640px) {
   .topbar { grid-template-columns: auto 1fr; height: auto; padding: 10px 16px; }
-  .brand-name, .top-right { display: none; }
+  .brand-text, .top-right { display: none; }
   .tabs { justify-self: end; }
   .tab span { display: none; }
   .search-box .input { width: 100%; }

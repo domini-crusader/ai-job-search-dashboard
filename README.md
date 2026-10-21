@@ -1,6 +1,9 @@
 # ai-job-search-dashboard
 
-<img src="https://raw.githubusercontent.com/MadsLorentzen/ai-job-search/master/assets/mascot/pip_flight_loop.gif" alt="Pip, o mascote do ai-job-search" width="120">
+<sub>por [DominiCrusader](https://github.com/domini-crusader)</sub>
+
+<img src="https://raw.githubusercontent.com/MadsLorentzen/ai-job-search/master/assets/mascot/pip_flight_loop.gif" alt="Pip, o mascote do ai-job-search" width="120"><br>
+🇧🇷
 
 Addon para o [ai-job-search](https://github.com/MadsLorentzen/ai-job-search), de [Mads Lorentzen](https://github.com/MadsLorentzen): um painel local em Kanban com todas as vagas e candidaturas do seu workspace, mais botões para os comandos do projeto.
 
@@ -188,5 +191,3 @@ Mads construiu o ai-job-search para a própria busca de emprego e o abriu para t
 O mascote **Pip** também é do ai-job-search (licença MIT, © 2026 Mads Lorentzen). O painel não traz uma cópia: ele carrega `assets/mascot/pip_flight_loop.gif` do seu próprio workspace e, se o arquivo não existir, usa um ícone genérico.
 
 O ai-job-search-dashboard é um projeto independente: não é mantido nem endossado pelo autor do ai-job-search, e nenhum dos dois é afiliado à Anthropic.
-
-O painel em si é feito por [DominiCrusader](https://github.com/domini-crusader), em [domini-crusader/ai-job-search-dashboard](https://github.com/domini-crusader/ai-job-search-dashboard). Sugestões e problemas do painel vão para as issues de lá.
