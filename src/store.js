@@ -50,8 +50,13 @@ window.addEventListener('hashchange', () => { state.tab = tabFromHash() })
 
 // Preferências por navegador (tema, filtros); a falta de storage só desliga a memória.
 function loadPrefs() {
-  const defaults = { theme: 'system', showDiscarded: false, fitFilter: [], claudeMode: 'background' }
-  try { return { ...defaults, ...JSON.parse(localStorage.getItem('ajs-dashboard-prefs') || '{}') } } catch { return defaults }
+  const defaults = { v: 2, theme: 'dark', showDiscarded: false, fitFilter: [], claudeMode: 'background' }
+  try {
+    const saved = JSON.parse(localStorage.getItem('ajs-dashboard-prefs') || '{}')
+    // v2: o escuro virou o tema padrão; preferências antigas migram uma vez.
+    if (!saved.v) { saved.v = 2; saved.theme = 'dark' }
+    return { ...defaults, ...saved }
+  } catch { return defaults }
 }
 
 export function savePrefs() {

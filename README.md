@@ -46,6 +46,19 @@ npm start
 
 Com as duas pastas lado a lado (`Projetos/ai-job-search` e `Projetos/ai-job-search-dashboard`), o painel encontra o workspace sozinho. Em outro layout, use `npm start -- --root <pasta>`.
 
+### Atalho na área de trabalho (Windows)
+
+Para abrir o painel com dois cliques, sem terminal:
+
+- **`Painel de Vagas.cmd`** (na pasta do addon): sobe o painel e abre o navegador. Se o painel já estiver rodando, só abre o navegador. Na primeira vez, instala as dependências.
+- **`instalar-atalho.ps1`**: cria o atalho "Painel de Vagas" na área de trabalho, com o ícone do Pip (gerado do GIF do seu workspace) e a janela do servidor minimizada. Feche essa janela para encerrar o painel.
+
+```powershell
+powershell -ExecutionPolicy Bypass -File instalar-atalho.ps1
+```
+
+Se o ai-job-search não estiver ao lado do addon, passe `-Root C:\caminho\ai-job-search` ou defina a variável `AJS_ROOT`.
+
 ### Opções
 
 | Opção | Efeito |

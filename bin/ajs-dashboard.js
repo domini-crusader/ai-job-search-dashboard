@@ -5,6 +5,7 @@
 import fs from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { spawn } from 'node:child_process'
 
 const ADDON_DIR = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
 const pkg = JSON.parse(fs.readFileSync(path.join(ADDON_DIR, 'package.json'), 'utf8'))
@@ -51,6 +52,24 @@ const { resolveWorkspace } = await import('../server/workspace.js')
 let root
 try { root = resolveWorkspace() } catch (e) { fail(e.message) }
 process.env.AJS_ROOT = root
+
+// Painel já rodando nesta porta (atalho clicado de novo): só abre o navegador.
+const port = Number(process.env.AJS_DASHBOARD_PORT) || 5174
+const url = `http://127.0.0.1:${port}/`
+try {
+  const r = await fetch(`${url}api/catalog`, { signal: AbortSignal.timeout(1500) })
+  if (r.ok) {
+    console.log(`  O painel já está rodando: ${url}`)
+    if (!process.env.DASHBOARD_NO_OPEN) openBrowser(url)
+    process.exit(0)
+  }
+} catch { /* porta livre: sobe o servidor */ }
+
+function openBrowser(target) {
+  const cmd = process.platform === 'win32' ? ['cmd', ['/c', 'start', '""', target]]
+    : process.platform === 'darwin' ? ['open', [target]] : ['xdg-open', [target]]
+  spawn(cmd[0], cmd[1], { detached: true, stdio: 'ignore', windowsHide: true }).unref()
+}
 
 const { createServer } = await import('vite')
 const server = await createServer({ configFile: path.join(ADDON_DIR, 'vite.config.js') })
