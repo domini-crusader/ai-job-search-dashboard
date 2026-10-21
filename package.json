@@ -1,0 +1,31 @@
+{
+  "name": "ai-job-search-dashboard",
+  "version": "0.1.0",
+  "description": "Addon para o ai-job-search: painel Kanban local das vagas e botões para os comandos do projeto",
+  "type": "module",
+  "private": true,
+  "bin": {
+    "ajs-dashboard": "bin/ajs-dashboard.js"
+  },
+  "files": [
+    "bin",
+    "server",
+    "src",
+    "index.html",
+    "vite.config.js"
+  ],
+  "scripts": {
+    "start": "node bin/ajs-dashboard.js",
+    "dev": "vite",
+    "build": "vite build"
+  },
+  "engines": {
+    "node": ">=20.19"
+  },
+  "dependencies": {
+    "@vitejs/plugin-vue": "^6.0.10",
+    "vite": "^8.3.4",
+    "vue": "^3.5.44"
+  },
+  "keywords": ["ai-job-search", "addon", "kanban", "vue", "vite"]
+}
