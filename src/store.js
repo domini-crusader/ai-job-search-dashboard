@@ -147,8 +147,20 @@ async function copyText(text) {
   }
 }
 
+// Abrir uma janela do terminal leva alguns segundos sem retorno visual, o que
+// convida a clicar de novo; o mesmo comando fica travado por um instante.
+const launching = new Map()
+
 // Comandos do Claude Code: copia o slash command ou abre o CLI num terminal.
 export async function claudeCommand(id, params = {}, launch = false) {
+  if (launch) {
+    if (Date.now() - (launching.get(id) ?? 0) < 6000) {
+      toast('Este comando já está abrindo no terminal — a janela pode levar alguns segundos', 'info')
+      return false
+    }
+    launching.set(id, Date.now())
+    toast(id === 'login' ? 'Abrindo o Claude Code para login…' : 'Abrindo o Claude Code no terminal…', 'info')
+  }
   try {
     const res = await fetch('/api/claude', {
       method: 'POST',
@@ -160,6 +172,7 @@ export async function claudeCommand(id, params = {}, launch = false) {
     if (res.status === 409 && data.code === 'login') {
       await copyText(data.prompt)
       state.catalog.claudeLoggedIn = false
+      launching.delete(id)
       toast(`O Claude Code do terminal não está logado. ${data.prompt} foi copiado — cole no app do Claude, ou faça login para rodar daqui.`,
         'error', { label: 'Fazer login', run: () => claudeCommand('login', {}, true) })
       return false
@@ -183,6 +196,11 @@ export async function claudeCommand(id, params = {}, launch = false) {
 
 // Scripts locais: a resposta chega em streaming e vai para o console.
 export async function runScript(command, params = {}) {
+  const busy = state.runs.find((r) => r.id === command.id && r.status === 'running')
+  if (busy) {
+    toast(`${command.label} já está em execução`, 'info', { label: 'Ver saída', run: () => { state.activeRun = busy.uid; goTo('comandos') } })
+    return
+  }
   const controller = new AbortController()
   const run = reactive({
     uid: Date.now() + Math.random(),
