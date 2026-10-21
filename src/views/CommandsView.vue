@@ -1,6 +1,6 @@
 <script setup>
 import { computed, nextTick, ref, watch } from 'vue'
-import { state, trigger } from '../store.js'
+import { state, trigger, savePrefs } from '../store.js'
 import Icon from '../components/Icon.vue'
 
 const groups = computed(() =>
@@ -45,8 +45,18 @@ function clearFinished() {
         <button class="btn primary" @click="trigger('login', {}, true)">Fazer login</button>
       </div>
       <div class="hint-bar">
-        <Icon name="copy" :size="14" />
-        <span v-if="state.catalog.claudeCli && state.catalog.claudeLoggedIn !== false">Comandos do Claude abrem uma sessão do Claude Code no terminal.</span>
+        <Icon name="terminal" :size="14" />
+        <template v-if="state.catalog.claudeCli && state.catalog.claudeLoggedIn === true">
+          <span class="grow">
+            {{ state.prefs.claudeMode === 'terminal'
+              ? 'Comandos do Claude abrem uma sessão do Claude Code numa janela do terminal.'
+              : 'Buscar, ranquear, relatório e plano de estudos rodam aqui em segundo plano, com a saída ao lado. Os que fazem perguntas abrem o terminal.' }}
+          </span>
+          <div class="segmented" role="group" aria-label="Onde rodar o Claude">
+            <button :class="{ on: state.prefs.claudeMode !== 'terminal' }" @click="state.prefs.claudeMode = 'background'; savePrefs()">No painel</button>
+            <button :class="{ on: state.prefs.claudeMode === 'terminal' }" @click="state.prefs.claudeMode = 'terminal'; savePrefs()">No terminal</button>
+          </div>
+        </template>
         <span v-else>Comandos do Claude são copiados — cole no Claude Code. Scripts locais rodam aqui e a saída aparece ao lado.</span>
       </div>
 
@@ -63,7 +73,7 @@ function clearFinished() {
               </span>
               <span class="tile-label">
                 {{ c.label }}
-                <span class="tile-kind">{{ c.kind === 'claude' ? 'Claude Code' : 'Script local' }}</span>
+                <span class="tile-kind">{{ c.kind !== 'claude' ? 'Script local' : c.background && state.prefs.claudeMode !== 'terminal' && state.catalog.claudeLoggedIn ? 'Claude Code · no painel' : 'Claude Code · terminal' }}</span>
               </span>
             </button>
             <button v-if="hasOptions(c)" class="btn ghost sm icon-only opts" title="Opções" @click="trigger(c.id, {}, false, true)">

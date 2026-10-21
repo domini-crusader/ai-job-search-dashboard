@@ -11,6 +11,81 @@ import path from 'node:path'
 import { spawnSync, execFile } from 'node:child_process'
 import { ROOT, trackerRow, httpError } from './data.js'
 
+// O claude.cmd do npm só roda via shell; para passar argumentos com espaços sem
+// shell, usa o executável que ele chama (node_modules/@anthropic-ai/claude-code/bin).
+function claudeExe() {
+  const bin = claudeBin()
+  if (!bin || !/\.cmd$/i.test(bin)) return bin
+  const exe = path.join(path.dirname(bin), 'node_modules', '@anthropic-ai', 'claude-code', 'bin', 'claude.exe')
+  return fs.existsSync(exe) ? exe : null
+}
+
+const BACKGROUND_NOTE = 'Execução não interativa iniciada pelo ai-job-search-dashboard: não há ninguém para responder perguntas. ' +
+  'Não pergunte nada; use os padrões documentados do comando e siga até o fim, resumindo o resultado no final.'
+
+// Passo de execução em segundo plano: `claude -p` com o slash command no stdin,
+// saída stream-json traduzida para o console. Só as ferramentas que esses comandos
+// usam ficam liberadas (mais o que o .claude/settings.json do workspace já permite).
+export function claudeBackgroundStep(prompt) {
+  const exe = claudeExe()
+  if (!exe) throw httpError(501, 'não encontrei o executável do Claude Code para rodar em segundo plano')
+  return {
+    cmd: exe,
+    args: ['-p', '--output-format', 'stream-json', '--verbose', '--permission-mode', 'acceptEdits',
+      '--append-system-prompt', BACKGROUND_NOTE,
+      '--allowedTools', 'Read', 'Glob', 'Grep', 'Edit', 'Write', 'WebFetch', 'WebSearch', 'Agent', 'Task', 'TodoWrite',
+      '--disallowedTools', 'AskUserQuestion'],
+    stdin: prompt,
+    cwd: ROOT,
+    format: 'claude-stream',
+    label: `▶ Claude Code em segundo plano: ${prompt}`,
+  }
+}
+
+const short = (s, n = 140) => { const t = String(s ?? '').replace(/\s+/g, ' ').trim(); return t.length > n ? `${t.slice(0, n - 1)}…` : t }
+
+function describeTool(name, input = {}) {
+  const arg = input.command ?? input.query ?? input.url ?? input.file_path ?? input.pattern ?? input.description ?? input.prompt ?? ''
+  return `  → ${name}${arg ? `: ${short(arg)}` : ''}`
+}
+
+// Traduz as linhas JSON do `claude -p --output-format stream-json` para texto.
+export function claudeStreamFormatter() {
+  let buf = ''
+  return (chunk) => {
+    buf += chunk.toString('utf8')
+    const lines = buf.split('\n')
+    buf = lines.pop()
+    let out = ''
+    for (const line of lines) {
+      if (!line.trim()) continue
+      let ev
+      try { ev = JSON.parse(line) } catch { out += `${line}\n`; continue }
+      if (ev.type === 'system' && ev.subtype === 'init') {
+        out += `sessão iniciada · modelo ${ev.model ?? '?'}\n\n`
+      } else if (ev.type === 'assistant') {
+        for (const c of ev.message?.content ?? []) {
+          if (c.type === 'text' && c.text.trim()) out += `${c.text.trim()}\n\n`
+          else if (c.type === 'tool_use') out += `${describeTool(c.name, c.input)}\n`
+        }
+      } else if (ev.type === 'user') {
+        for (const c of ev.message?.content ?? []) {
+          if (c.type === 'tool_result' && c.is_error) {
+            const text = Array.isArray(c.content) ? c.content.map((x) => x.text ?? '').join(' ') : c.content
+            out += `    ✗ ${short(text, 200)}\n`
+          }
+        }
+      } else if (ev.type === 'result') {
+        const secs = ev.duration_ms ? `${Math.round(ev.duration_ms / 1000)}s` : ''
+        const cost = typeof ev.total_cost_usd === 'number' ? ` · US$ ${ev.total_cost_usd.toFixed(2)}` : ''
+        out += `\n── ${ev.is_error ? 'terminou com erro' : 'concluído'} ${secs}${cost} ──\n`
+        if (ev.result && ev.is_error) out += `${ev.result}\n`
+      }
+    }
+    return out
+  }
+}
+
 // Login do CLI: sem ele, a sessão aberta no terminal para na tela de login e o
 // comando nunca roda. O login do app desktop não vale para o CLI.
 let authCache = { at: 0, value: null }
@@ -135,11 +210,11 @@ export const GROUPS = [
 
 export const COMMANDS = [
   // --- Claude Code ---
-  { id: 'scrape', kind: 'claude', group: 'search', label: 'Buscar vagas', icon: 'search',
+  { id: 'scrape', kind: 'claude', background: true, group: 'search', label: 'Buscar vagas', icon: 'search',
     description: 'Busca nos portais instalados e deduplica (/scrape).',
     params: [{ name: 'args', label: 'Argumentos (opcional, ex.: health)', type: 'text', optional: true }],
     prompt: (p) => `/scrape ${textParam(p.args)}`.trim() },
-  { id: 'rank', kind: 'claude', group: 'search', label: 'Ranquear', icon: 'star',
+  { id: 'rank', kind: 'claude', background: true, group: 'search', label: 'Ranquear', icon: 'star',
     description: 'Pontua as vagas novas e monta a shortlist (/rank).',
     params: [{ name: 'args', label: 'Argumentos (ex.: --all, --focus "aws")', type: 'text', optional: true }],
     prompt: (p) => `/rank ${textParam(p.args)}`.trim() },
@@ -157,9 +232,9 @@ export const COMMANDS = [
     prompt: (p) => `/interview ${textParam(p.args)}`.trim() },
   { id: 'gmail-sync', kind: 'claude', group: 'track', label: 'Sincronizar Gmail', icon: 'mail',
     description: 'Atualiza status lendo respostas no Gmail (/gmail-sync).', prompt: () => '/gmail-sync' },
-  { id: 'html-report', kind: 'claude', group: 'reports', label: 'Relatório HTML', icon: 'chart',
+  { id: 'html-report', kind: 'claude', background: true, group: 'reports', label: 'Relatório HTML', icon: 'chart',
     description: 'Gera o relatório estático em reports/ (/html-report).', prompt: () => '/html-report' },
-  { id: 'upskill', kind: 'claude', group: 'reports', label: 'Plano de estudos', icon: 'book',
+  { id: 'upskill', kind: 'claude', background: true, group: 'reports', label: 'Plano de estudos', icon: 'book',
     description: 'Lacunas de skills nas vagas acompanhadas (/upskill).', prompt: () => '/upskill' },
   { id: 'notion-sync', kind: 'claude', group: 'reports', label: 'Enviar ao Notion', icon: 'database',
     description: 'Envia vagas e candidaturas ao Notion (/notion-sync).', prompt: () => '/notion-sync' },

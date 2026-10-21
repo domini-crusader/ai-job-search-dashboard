@@ -4,7 +4,7 @@ import fs from 'node:fs'
 import path from 'node:path'
 import { spawn } from 'node:child_process'
 import { ROOT, SEEN, TRACKER, loadBoard, setSeenStatus, setTrackerStatus, httpError } from './data.js'
-import { findCommand, publicCatalog, claudeBin, claudeLoggedIn, pdfFor } from './commands.js'
+import { findCommand, publicCatalog, claudeBin, claudeLoggedIn, claudeBackgroundStep, claudeStreamFormatter, pdfFor } from './commands.js'
 import { health } from './health.js'
 import { jobDetails, brief } from './enrich.js'
 import { profileReport, stepSections, saveSection } from './profile.js'
@@ -84,11 +84,25 @@ function launchClaude(prompt) {
   })
 }
 
+// No Windows, matar o .cmd não mata o claude.exe/python.exe filho: encerra a árvore.
+function killTree(child) {
+  if (process.platform === 'win32') spawn('taskkill', ['/pid', String(child.pid), '/T', '/F'], { windowsHide: true })
+  else child.kill()
+}
+
 async function runCommand(req, res, body) {
   const command = findCommand(body.id)
   if (command.kind !== 'script') throw httpError(400, 'este comando não é um script local')
   if (running.has(command.id)) throw httpError(409, 'este comando já está em execução')
-  const steps = command.build(body.params || {})
+  let steps
+  if (command.kind === 'claude') {
+    // Execução em segundo plano: `claude -p`, sem janela, com a saída no console.
+    if (!body.background || !command.background) throw httpError(400, 'este comando do Claude precisa do terminal')
+    if ((await claudeLoggedIn({ fresh: true })) !== true) throw httpError(409, 'O Claude Code do terminal não está logado — faça login primeiro')
+    steps = [claudeBackgroundStep(command.prompt(body.params || {}))]
+  } else {
+    steps = command.build(body.params || {})
+  }
 
   res.statusCode = 200
   res.setHeader('Content-Type', 'text/plain; charset=utf-8')
@@ -100,7 +114,7 @@ async function runCommand(req, res, body) {
   res.on('close', () => {
     if (!res.writableFinished) {
       aborted = true
-      if (child && child.exitCode === null) child.kill()
+      if (child && child.exitCode === null) killTree(child)
     }
   })
 
@@ -109,14 +123,17 @@ async function runCommand(req, res, body) {
   try {
     for (const step of steps) {
       if (aborted) break
-      res.write(`$ ${[step.cmd, ...step.args].join(' ')}\n`)
+      res.write(step.label ? `${step.label}\n\n` : `$ ${[step.cmd, ...step.args].join(' ')}\n`)
       exitCode = await new Promise((resolve) => {
         child = spawn(step.cmd, step.args, {
           cwd: step.cwd || ROOT,
           env: { ...process.env, PYTHONIOENCODING: 'utf-8', PYTHONUTF8: '1' },
           windowsHide: true,
+          shell: Boolean(step.shell),
         })
-        child.stdout.on('data', (d) => res.write(d))
+        if (step.stdin !== undefined) child.stdin.end(step.stdin)
+        const format = step.format === 'claude-stream' ? claudeStreamFormatter() : null
+        child.stdout.on('data', (d) => res.write(format ? format(d) : d))
         child.stderr.on('data', (d) => res.write(d))
         child.on('error', (err) => { res.write(`\n[erro] ${err.message}\n`); resolve(127) })
         child.on('close', (code) => resolve(code ?? 1))

@@ -120,7 +120,10 @@ Um botão por comando: um clique executa. O ícone de engrenagem abre as opçõe
 
 ## Comandos
 
-- **Claude Code** (`/scrape`, `/rank`, `/apply`, `/outcome`, `/interview`, `/html-report`, …): o botão copia o slash command para colar no Claude. Se o CLI `claude` estiver no PATH (ou em `CLAUDE_BIN`), aparece também "Abrir no terminal", que inicia uma sessão interativa já com o comando.
+- **Claude Code** (`/scrape`, `/rank`, `/apply`, `/outcome`, `/interview`, `/html-report`, …): exige o CLI `claude` instalado (`npm install -g @anthropic-ai/claude-code`) e logado. O login do app desktop não vale para o CLI; use **Início → Ambiente → Fazer login**.
+  - **No painel (segundo plano):** `/scrape`, `/rank`, `/html-report` e `/upskill` rodam com `claude -p`, sem abrir janela, e o progresso aparece no console da aba Comandos: o que o Claude diz, cada ferramenta usada e o resumo final, com duração e custo. Ficam liberadas só as ferramentas que esses comandos usam (leitura, edição dos arquivos do workspace, busca na web, subagentes), mais o que o `.claude/settings.json` do ai-job-search já permite; o resto é negado, porque não há ninguém para aprovar. "Parar" encerra a sessão.
+  - **No terminal:** os comandos que fazem perguntas (`/apply`, `/setup`, `/outcome`, `/interview`...) abrem uma sessão interativa numa janela do terminal, já com o comando. A preferência "No painel / No terminal" na aba Comandos vale para os demais.
+  - Sem o CLI ou sem login, o botão copia o slash command para você colar no app do Claude.
 - **Scripts locais** (`tools/rank_state.py`, guardas de segurança, testes, instalação dos CLIs dos portais): rodam direto no workspace, com a saída no console e botão de parar.
 - **Por candidatura** (painel lateral do card): compilar CV (lualatex) e carta (xelatex), verificar com `verify_pdf.py`/`verify_layout.py` e abrir o PDF.
 

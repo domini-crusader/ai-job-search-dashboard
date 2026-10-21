@@ -50,7 +50,7 @@ window.addEventListener('hashchange', () => { state.tab = tabFromHash() })
 
 // Preferências por navegador (tema, filtros); a falta de storage só desliga a memória.
 function loadPrefs() {
-  const defaults = { theme: 'system', showDiscarded: false, fitFilter: [] }
+  const defaults = { theme: 'system', showDiscarded: false, fitFilter: [], claudeMode: 'background' }
   try { return { ...defaults, ...JSON.parse(localStorage.getItem('ajs-dashboard-prefs') || '{}') } } catch { return defaults }
 }
 
@@ -201,12 +201,12 @@ export async function runScript(command, params = {}) {
     toast(`${run.label}: em execução`, 'info', { label: 'Ver saída', run: () => goTo('comandos') })
   }
 
-  const { __label, ...cleanParams } = params
+  const { __label, __background, ...cleanParams } = params
   try {
     const res = await fetch('/api/run', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'X-Dashboard': '1' },
-      body: JSON.stringify({ id: command.id, params: cleanParams }),
+      body: JSON.stringify({ id: command.id, params: cleanParams, background: Boolean(__background) }),
       signal: controller.signal,
     })
     if (!res.ok) {
@@ -255,13 +255,22 @@ export function trigger(id, preset = {}, launch = false, options = false) {
     state.dialog = { command, params, preset }
     return
   }
-  return execute(command, preset, launch || state.catalog.claudeCli)
+  return execute(command, preset, launch ? 'terminal' : 'auto')
 }
 
-export function execute(command, params, launch = false) {
+// Comandos do Claude que não fazem perguntas rodam no próprio painel (`claude -p`),
+// com a saída no console, quando a preferência é "No painel" e o CLI está logado.
+// how: 'auto' (decide), 'background', 'terminal' ou 'copy'.
+export function execute(command, params, how = 'auto') {
   state.dialog = null
-  if (command.kind === 'claude') return claudeCommand(command.id, params, launch)
-  return runScript(command, params)
+  if (command.kind !== 'claude') return runScript(command, params)
+  const cli = state.catalog.claudeCli
+  const canBackground = command.background && cli && state.catalog.claudeLoggedIn === true
+  if (how === 'background' || (how === 'auto' && canBackground && state.prefs.claudeMode !== 'terminal')) {
+    return runScript(command, { ...params, __background: true, __label: command.label })
+  }
+  if (how === 'copy') return claudeCommand(command.id, params, false)
+  return claudeCommand(command.id, params, cli)
 }
 
 // ---------- Início: perfil e preferências de busca ----------
