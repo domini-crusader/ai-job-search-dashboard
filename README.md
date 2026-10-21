@@ -55,7 +55,36 @@ Com as duas pastas lado a lado (`Projetos/ai-job-search` e `Projetos/ai-job-sear
 
 O servidor escuta só em `127.0.0.1`.
 
-## O que aparece
+## As três abas
+
+### Início
+
+- **Perfil:** valida, etapa por etapa, o que o `/setup` preenche: identidade, formação, experiência, habilidades, perfil comportamental, objetivos, configuração de busca, templates de CV e carta e exemplos STAR. Cada etapa lista o que falta e oferece o comando que completa (`/setup`, `/expand`). Certificações e `documents/` aparecem como opcionais.
+- **Busca:** reorganiza as escolhas que o ai-job-search oferece para o `/scrape`:
+  - reordenar (arrastando), editar, criar e remover as categorias de `search-queries.md`;
+  - ligar e desligar portais (a chave `enabled` de cada `SKILL.md`);
+  - mudar a janela de datas.
+  
+  Cada categoria também vira uma lista de objetivos com um clique. Antes de qualquer gravação, o arquivo original é copiado para `~/.ai-job-search-dashboard/backups/`.
+- **Ambiente:** Python, pypdf, Bun, LaTeX, CLI do Claude, portais instalados e dados existentes, com botão para instalar o que faltar. Tema claro/escuro/sistema.
+
+### Vagas
+
+Um Kanban por **lista de objetivos**. A lista "Todas as vagas" mostra tudo; crie outras (por exemplo, "Back-end .NET" ou "Tech Lead") com filtros próprios:
+- termos para incluir e excluir;
+- fit inicial do `/scrape` e pontuação mínima do `/rank`;
+- portais;
+- esconder vagas com alerta de idioma ou local;
+- incluir ou não as candidaturas;
+- quais colunas aparecem.
+
+As listas ficam em `~/.ai-job-search-dashboard/` (uma por workspace), fora do repositório: não mudam nenhum dado do ai-job-search.
+
+### Comandos
+
+Um botão por comando: um clique executa. O ícone de engrenagem abre as opções, quando o comando tem. A saída dos scripts locais aparece no painel ao lado.
+
+## Colunas e dados
 
 | Coluna | Origem |
 |---|---|
@@ -94,4 +123,16 @@ npm install
 npm run dev     # Vite com HMR; usa AJS_ROOT ou a pasta irmã ../ai-job-search
 ```
 
-Estrutura: `bin/` (CLI), `server/` (API local como plugin do Vite: `workspace.js` localiza o workspace, `data.js` lê e grava o estado, `commands.js` é o catálogo de botões, `api.js` define as rotas) e `src/` (app Vue).
+Estrutura:
+- `bin/`: o CLI.
+- `server/`: a API local, como plugin do Vite.
+  - `workspace.js` localiza o workspace.
+  - `data.js` lê e grava vagas e candidaturas.
+  - `profile.js` valida o perfil.
+  - `settings.js` cuida das preferências de busca e das listas.
+  - `health.js` diagnostica o ambiente.
+  - `commands.js` é o catálogo de botões.
+  - `api.js` define as rotas.
+- `src/`: o app Vue (`views/` com uma tela por aba e `components/`).
+
+O diretório de configuração pode ser trocado com `AJS_DASHBOARD_HOME`.

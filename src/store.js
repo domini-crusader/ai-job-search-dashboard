@@ -1,6 +1,8 @@
 // Estado compartilhado do painel e chamadas à API local (server/api.js).
 import { reactive } from 'vue'
 
+const TABS = ['inicio', 'vagas', 'comandos']
+
 export const state = reactive({
   board: { jobs: [], applications: [], meta: {} },
   catalog: { commands: [], claudeCli: false, python: null },
@@ -8,11 +10,38 @@ export const state = reactive({
   error: null,
   runs: [], // { uid, id, label, output, status: 'running'|'ok'|'fail'|'stopped', controller }
   activeRun: null,
-  logOpen: false,
   toasts: [],
+  tab: tabFromHash(),
+  health: null,
+  profile: null,
+  search: null,
+  lists: null, // { active, lists: [...] } - listas de objetivos
+  prefs: loadPrefs(),
   dialog: null, // { command, params } - diálogo de parâmetros aberto
   selected: null, // id do card aberto no painel lateral
 })
+
+function tabFromHash() {
+  const t = location.hash.replace(/^#\/?/, '')
+  return TABS.includes(t) ? t : 'vagas'
+}
+
+export function goTo(tab) {
+  state.tab = tab
+  history.replaceState(null, '', `#/${tab}`)
+}
+window.addEventListener('hashchange', () => { state.tab = tabFromHash() })
+
+// Preferências por navegador (tema, filtros); a falta de storage só desliga a memória.
+function loadPrefs() {
+  const defaults = { theme: 'system', showDiscarded: false, fitFilter: [] }
+  try { return { ...defaults, ...JSON.parse(localStorage.getItem('ajs-dashboard-prefs') || '{}') } } catch { return defaults }
+}
+
+export function savePrefs() {
+  try { localStorage.setItem('ajs-dashboard-prefs', JSON.stringify(state.prefs)) } catch { /* sem storage */ }
+  document.documentElement.dataset.theme = state.prefs.theme === 'system' ? '' : state.prefs.theme
+}
 
 async function api(path, { method = 'GET', body } = {}) {
   const res = await fetch(path, {
@@ -49,6 +78,10 @@ export async function loadBoard() {
 
 export async function loadCatalog() {
   try { state.catalog = await api('/api/catalog') } catch (e) { toast(e.message, 'error') }
+}
+
+export async function loadHealth() {
+  try { state.health = await api('/api/health') } catch (e) { toast(e.message, 'error') }
 }
 
 export function watchChanges() {
@@ -116,7 +149,9 @@ export async function runScript(command, params = {}) {
   state.runs.unshift(run)
   if (state.runs.length > 20) state.runs.pop()
   state.activeRun = run.uid
-  state.logOpen = true
+  if (state.tab !== 'comandos') {
+    toast(`${run.label}: em execução`, 'info', { label: 'Ver saída', run: () => goTo('comandos') })
+  }
 
   const { __label, ...cleanParams } = params
   try {
@@ -151,30 +186,82 @@ export async function runScript(command, params = {}) {
     }
   }
   toast(`${run.label}: ${{ ok: 'concluído', fail: 'falhou', stopped: 'interrompido' }[run.status]}`,
-    run.status === 'ok' ? 'ok' : 'error')
+    run.status === 'ok' ? 'ok' : 'error',
+    state.tab !== 'comandos' ? { label: 'Ver saída', run: () => { state.activeRun = run.uid; goTo('comandos') } } : null)
+  if (['install-portals', 'install-pypdf'].includes(command.id)) loadHealth()
 }
 
 export function findCommand(id) {
   return state.catalog.commands.find((c) => c.id === id)
 }
 
-// Ponto único de disparo dos botões: abre o diálogo de parâmetros quando o
-// comando tem algum (ou confirmação), senão executa direto.
-export function trigger(id, preset = {}, launch = false) {
+// Ponto único de disparo dos botões: um clique executa; o diálogo só abre quando
+// falta um parâmetro obrigatório, o comando pede confirmação ou `options` é pedido.
+export function trigger(id, preset = {}, launch = false, options = false) {
   const command = findCommand(id)
   if (!command) return toast(`comando indisponível: ${id}`, 'error')
-  const needsDialog = (command.params || []).some((p) => preset[p.name] === undefined)
-  if (needsDialog || command.confirm) {
+  const missing = (command.params || []).some((p) => p.required && !preset[p.name])
+  if (options || missing || command.confirm) {
     const params = {}
     for (const p of command.params || []) params[p.name] = preset[p.name] ?? p.default ?? (p.type === 'checkbox' ? false : '')
     state.dialog = { command, params, preset }
     return
   }
-  return execute(command, preset, launch)
+  return execute(command, preset, launch || state.catalog.claudeCli)
 }
 
 export function execute(command, params, launch = false) {
   state.dialog = null
   if (command.kind === 'claude') return claudeCommand(command.id, params, launch)
   return runScript(command, params)
+}
+
+// ---------- Início: perfil e preferências de busca ----------
+
+export async function loadProfile() {
+  try { state.profile = await api('/api/profile') } catch (e) { toast(e.message, 'error') }
+}
+
+export async function loadSearch() {
+  try { state.search = await api('/api/settings/search') } catch (e) { toast(e.message, 'error') }
+}
+
+async function saveSearch(path, body, okMessage) {
+  try {
+    state.search = await api(path, { method: 'PUT', body })
+    toast(okMessage, 'ok')
+    loadProfile()
+    return true
+  } catch (e) {
+    toast(e.message, 'error')
+    return false
+  }
+}
+
+export const saveCategories = (categories) =>
+  saveSearch('/api/settings/categories', { categories }, 'Categorias salvas em search-queries.md')
+export const saveDays = (days) =>
+  saveSearch('/api/settings/days', { days }, `Janela de busca: últimos ${days} dias`)
+export const togglePortal = (portal, enabled) =>
+  saveSearch('/api/settings/portal', { id: portal.id, enabled }, `${portal.name} ${enabled ? 'ligado' : 'desligado'} no /scrape`)
+
+// ---------- listas de objetivos ----------
+
+export async function loadLists() {
+  try { state.lists = await api('/api/lists') } catch (e) { toast(e.message, 'error') }
+}
+
+export async function saveLists(next) {
+  try {
+    state.lists = await api('/api/lists', { method: 'PUT', body: next })
+    return true
+  } catch (e) {
+    toast(e.message, 'error')
+    return false
+  }
+}
+
+export function activeList() {
+  const l = state.lists
+  return l?.lists.find((x) => x.id === l.active) || l?.lists[0] || null
 }

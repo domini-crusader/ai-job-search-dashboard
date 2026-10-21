@@ -1,6 +1,7 @@
 <script setup>
 import { computed, reactive } from 'vue'
 import { state, execute } from '../store.js'
+import Icon from './Icon.vue'
 
 const props = defineProps({ dialog: Object })
 const emit = defineEmits(['close'])
@@ -8,43 +9,45 @@ const emit = defineEmits(['close'])
 const params = reactive({ ...props.dialog.params })
 const cmd = computed(() => props.dialog.command)
 const missing = computed(() => (cmd.value.params || []).some((p) => p.required && !String(params[p.name] ?? '').trim()))
+const isClaude = computed(() => cmd.value.kind === 'claude')
 
-function submit(launch = false) {
-  if (missing.value) return
-  execute(cmd.value, { ...props.dialog.preset, ...params }, launch)
+function submit(launch) {
+  if (!missing.value) execute(cmd.value, { ...props.dialog.preset, ...params }, launch)
 }
 </script>
 
 <template>
-  <div class="overlay" @click.self="emit('close')">
-    <form class="dialog" @submit.prevent="submit(state.catalog.claudeCli && cmd.kind === 'claude')">
-      <h3>{{ cmd.icon }} {{ cmd.label }}</h3>
-      <p class="muted">{{ cmd.description }}</p>
+  <div class="overlay" @click.self="emit('close')" @keydown.esc="emit('close')">
+    <form class="dialog" @submit.prevent="submit(isClaude && state.catalog.claudeCli)">
+      <h3><Icon :name="cmd.icon" :size="18" /> {{ cmd.label }}</h3>
+      <p class="desc">{{ cmd.description }}</p>
       <p v-if="cmd.confirm" class="confirm">{{ cmd.confirm }}</p>
 
-      <label v-for="p in cmd.params || []" :key="p.name" class="field" :class="{ check: p.type === 'checkbox' }">
+      <label v-for="p in cmd.params || []" :key="p.name" class="field">
         <template v-if="p.type === 'checkbox'">
-          <input v-model="params[p.name]" type="checkbox" /> {{ p.label }}
+          <span class="switch"><input v-model="params[p.name]" type="checkbox" /> {{ p.label }}</span>
         </template>
         <template v-else>
-          <span>{{ p.label }}<b v-if="p.required"> *</b></span>
+          <span>{{ p.label }}</span>
           <input
-            v-model="params[p.name]"
-            class="input"
+            v-model="params[p.name]" class="input" autofocus
             :type="p.type === 'number' ? 'number' : p.type === 'url' ? 'url' : 'text'"
-            :placeholder="p.type === 'url' ? 'https://…' : ''"
-            :required="p.required"
+            :placeholder="p.type === 'url' ? 'https://…' : ''" :required="p.required"
           />
         </template>
       </label>
 
-      <div class="actions">
+      <div class="dialog-actions">
         <button type="button" class="btn ghost" @click="emit('close')">Cancelar</button>
-        <template v-if="cmd.kind === 'claude'">
-          <button type="button" class="btn" :class="{ primary: !state.catalog.claudeCli }" :disabled="missing" @click="submit(false)">⧉ Copiar comando</button>
-          <button v-if="state.catalog.claudeCli" type="submit" class="btn primary" :disabled="missing">▶ Abrir no terminal</button>
+        <template v-if="isClaude">
+          <button type="button" class="btn" :class="{ primary: !state.catalog.claudeCli }" :disabled="missing" @click="submit(false)">
+            <Icon name="copy" /> Copiar
+          </button>
+          <button v-if="state.catalog.claudeCli" type="submit" class="btn primary" :disabled="missing">
+            <Icon name="play" /> Abrir no terminal
+          </button>
         </template>
-        <button v-else type="submit" class="btn primary" :class="{ danger: cmd.confirm }" :disabled="missing">▶ Executar</button>
+        <button v-else type="submit" class="btn primary" :disabled="missing"><Icon name="play" /> Executar</button>
       </div>
     </form>
   </div>

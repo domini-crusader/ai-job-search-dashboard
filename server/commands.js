@@ -103,58 +103,69 @@ function mustExist(doc) {
 
 // ---------- catálogo ----------
 
+export const GROUPS = [
+  { id: 'search', title: 'Buscar e avaliar' },
+  { id: 'track', title: 'Acompanhar' },
+  { id: 'reports', title: 'Relatórios e integrações' },
+  { id: 'setup', title: 'Configuração' },
+  { id: 'maintenance', title: 'Manutenção' },
+]
+
 export const COMMANDS = [
-  // --- Fluxo principal (Claude Code) ---
-  { id: 'scrape', kind: 'claude', group: 'Fluxo (Claude Code)', label: 'Buscar vagas', icon: '🔎',
-    description: 'Roda /scrape: busca nos portais instalados e deduplica.',
-    params: [{ name: 'args', label: 'Argumentos (opcional, ex.: health)', type: 'text' }],
+  // --- Claude Code ---
+  { id: 'scrape', kind: 'claude', group: 'search', label: 'Buscar vagas', icon: 'search',
+    description: 'Busca nos portais instalados e deduplica (/scrape).',
+    params: [{ name: 'args', label: 'Argumentos (opcional, ex.: health)', type: 'text', optional: true }],
     prompt: (p) => `/scrape ${textParam(p.args)}`.trim() },
-  { id: 'rank', kind: 'claude', group: 'Fluxo (Claude Code)', label: 'Ranquear vagas', icon: '🏅',
-    description: 'Roda /rank: pontua as vagas novas e devolve a shortlist.',
-    params: [{ name: 'args', label: 'Argumentos (ex.: --all, --focus "aws")', type: 'text' }],
+  { id: 'rank', kind: 'claude', group: 'search', label: 'Ranquear', icon: 'star',
+    description: 'Pontua as vagas novas e monta a shortlist (/rank).',
+    params: [{ name: 'args', label: 'Argumentos (ex.: --all, --focus "aws")', type: 'text', optional: true }],
     prompt: (p) => `/rank ${textParam(p.args)}`.trim() },
-  { id: 'apply', kind: 'claude', group: 'Fluxo (Claude Code)', label: 'Candidatar (/apply)', icon: '📝',
-    description: 'Avalia a vaga e gera CV + carta sob medida.',
+  { id: 'apply', kind: 'claude', group: 'search', label: 'Candidatar', icon: 'send',
+    description: 'Avalia a vaga e gera CV + carta sob medida (/apply).',
     params: [{ name: 'url', label: 'URL da vaga', type: 'url', required: true }],
     prompt: (p) => `/apply ${httpUrl(p.url)}` },
-  { id: 'outcome', kind: 'claude', group: 'Fluxo (Claude Code)', label: 'Registrar resultado', icon: '📬',
-    description: 'Roda /outcome: atualiza status e arquiva o resultado.',
-    params: [{ name: 'args', label: 'Empresa / vaga (opcional)', type: 'text' }],
+  { id: 'outcome', kind: 'claude', group: 'track', label: 'Registrar resultado', icon: 'flag',
+    description: 'Atualiza o status e arquiva o resultado (/outcome).',
+    params: [{ name: 'args', label: 'Empresa / vaga (opcional)', type: 'text', optional: true }],
     prompt: (p) => `/outcome ${textParam(p.args)}`.trim() },
-  { id: 'interview', kind: 'claude', group: 'Fluxo (Claude Code)', label: 'Preparar entrevista', icon: '🎤',
-    description: 'Roda /interview para uma candidatura do tracker.',
-    params: [{ name: 'args', label: 'Empresa / vaga (opcional)', type: 'text' }],
+  { id: 'interview', kind: 'claude', group: 'track', label: 'Preparar entrevista', icon: 'mic',
+    description: 'Prepara respostas e perguntas (/interview).',
+    params: [{ name: 'args', label: 'Empresa / vaga (opcional)', type: 'text', optional: true }],
     prompt: (p) => `/interview ${textParam(p.args)}`.trim() },
-
-  // --- Relatórios e integrações (Claude Code) ---
-  { id: 'html-report', kind: 'claude', group: 'Relatórios e integrações', label: 'Relatório HTML', icon: '📊',
-    description: 'Gera o dashboard estático em reports/.', prompt: () => '/html-report' },
-  { id: 'upskill', kind: 'claude', group: 'Relatórios e integrações', label: 'Plano de estudos', icon: '📚',
-    description: 'Lacunas de skills nas vagas acompanhadas.', prompt: () => '/upskill' },
-  { id: 'gmail-sync', kind: 'claude', group: 'Relatórios e integrações', label: 'Sincronizar Gmail', icon: '✉️',
-    description: 'Atualiza status lendo respostas no Gmail.', prompt: () => '/gmail-sync' },
-  { id: 'notion-sync', kind: 'claude', group: 'Relatórios e integrações', label: 'Enviar ao Notion', icon: '🗂️',
-    description: 'Envia vagas ranqueadas e candidaturas ao Notion.', prompt: () => '/notion-sync' },
-
-  // --- Configuração (Claude Code) ---
-  { id: 'setup', kind: 'claude', group: 'Configuração', label: 'Perfil (/setup)', icon: '👤',
-    description: 'Onboarding / revisão do perfil do candidato.', prompt: () => '/setup' },
-  { id: 'expand', kind: 'claude', group: 'Configuração', label: 'Expandir competências', icon: '➕',
-    description: 'Lê documents/ e presença online para enriquecer o perfil.', prompt: () => '/expand' },
-  { id: 'add-portal', kind: 'claude', group: 'Configuração', label: 'Adicionar portal', icon: '🌐',
-    description: 'Gera um novo CLI de portal de vagas.',
-    params: [{ name: 'args', label: 'Portal / mercado (opcional)', type: 'text' }],
+  { id: 'gmail-sync', kind: 'claude', group: 'track', label: 'Sincronizar Gmail', icon: 'mail',
+    description: 'Atualiza status lendo respostas no Gmail (/gmail-sync).', prompt: () => '/gmail-sync' },
+  { id: 'html-report', kind: 'claude', group: 'reports', label: 'Relatório HTML', icon: 'chart',
+    description: 'Gera o relatório estático em reports/ (/html-report).', prompt: () => '/html-report' },
+  { id: 'upskill', kind: 'claude', group: 'reports', label: 'Plano de estudos', icon: 'book',
+    description: 'Lacunas de skills nas vagas acompanhadas (/upskill).', prompt: () => '/upskill' },
+  { id: 'notion-sync', kind: 'claude', group: 'reports', label: 'Enviar ao Notion', icon: 'database',
+    description: 'Envia vagas e candidaturas ao Notion (/notion-sync).', prompt: () => '/notion-sync' },
+  { id: 'setup', kind: 'claude', group: 'setup', label: 'Configurar perfil', icon: 'user',
+    description: 'Onboarding / revisão do perfil (/setup).', prompt: () => '/setup' },
+  { id: 'expand', kind: 'claude', group: 'setup', label: 'Expandir competências', icon: 'plus',
+    description: 'Enriquece o perfil com documents/ e presença online (/expand).', prompt: () => '/expand' },
+  { id: 'add-portal', kind: 'claude', group: 'setup', label: 'Adicionar portal', icon: 'globe',
+    description: 'Gera um novo CLI de portal de vagas (/add-portal).',
+    params: [{ name: 'args', label: 'Portal / mercado (opcional)', type: 'text', optional: true }],
     prompt: (p) => `/add-portal ${textParam(p.args)}`.trim() },
-  { id: 'add-template', kind: 'claude', group: 'Configuração', label: 'Adicionar template', icon: '🎨',
-    description: 'Registra um template próprio de CV ou carta.', prompt: () => '/add-template' },
+  { id: 'add-template', kind: 'claude', group: 'setup', label: 'Adicionar template', icon: 'layout',
+    description: 'Registra um template próprio de CV ou carta (/add-template).', prompt: () => '/add-template' },
 
-  // --- Scripts locais (execução direta) ---
-  { id: 'rank-candidates', kind: 'script', group: 'Scripts locais', label: 'Candidatas ao /rank', icon: '📋',
-    description: 'tools/rank_state.py candidates - lista o que o próximo /rank pontuaria.',
+  // --- Scripts locais ---
+  { id: 'install-portals', kind: 'script', group: 'setup', label: 'Instalar portais', icon: 'package',
+    description: 'Instala as dependências de cada CLI de portal (bun install).',
+    build: () => [py('tools/install_portal_clis.py')] },
+  { id: 'install-pypdf', kind: 'script', group: 'setup', label: 'Instalar pypdf', icon: 'package',
+    description: 'pip install pypdf — usado na verificação dos PDFs.',
+    confirm: 'Instalar o pacote pypdf no Python do usuário (pip install --user pypdf)?',
+    build: () => [py('-m', 'pip', 'install', '--user', 'pypdf')] },
+  { id: 'rank-candidates', kind: 'script', group: 'maintenance', label: 'Prévia do /rank', icon: 'list',
+    description: 'Lista o que o próximo /rank pontuaria (rank_state.py candidates).',
     params: [
-      { name: 'limit', label: 'Limite (0 = todas)', type: 'number', default: 10 },
-      { name: 'focus', label: 'Filtro (--focus)', type: 'text' },
-      { name: 'all', label: 'Incluir já ranqueadas (--all)', type: 'checkbox' },
+      { name: 'limit', label: 'Limite (0 = todas)', type: 'number', default: 10, optional: true },
+      { name: 'focus', label: 'Filtro (--focus)', type: 'text', optional: true },
+      { name: 'all', label: 'Incluir já ranqueadas (--all)', type: 'checkbox', optional: true },
     ],
     build: (p) => {
       const args = ['tools/rank_state.py', 'candidates', '--limit', String(intParam(p.limit, { min: 0, max: 10000, def: 10 }))]
@@ -163,43 +174,37 @@ export const COMMANDS = [
       if (p.all === true) args.push('--all')
       return [py(...args)]
     } },
-  { id: 'rank-sweep', kind: 'script', group: 'Scripts locais', label: 'Varredura de prazos (simulação)', icon: '⏳',
-    description: 'tools/rank_state.py sweep - mostra vagas ranqueadas com prazo vencido, sem gravar.',
+  { id: 'rank-sweep', kind: 'script', group: 'maintenance', label: 'Prazos vencidos', icon: 'clock',
+    description: 'Mostra vagas ranqueadas com prazo vencido, sem gravar.',
     build: () => [py('tools/rank_state.py', 'sweep')] },
-  { id: 'rank-sweep-write', kind: 'script', group: 'Scripts locais', label: 'Varredura de prazos (gravar)', icon: '🧹',
-    description: 'tools/rank_state.py sweep --write - marca como expired as vagas vencidas.',
+  { id: 'rank-sweep-write', kind: 'script', group: 'maintenance', label: 'Expirar vencidas', icon: 'archive',
+    description: 'Marca como expired as vagas com prazo vencido.',
     confirm: 'Marcar como "expired" as vagas ranqueadas com prazo vencido em seen_jobs.json?',
     build: () => [py('tools/rank_state.py', 'sweep', '--write')] },
-  { id: 'install-portals', kind: 'script', group: 'Scripts locais', label: 'Instalar CLIs dos portais', icon: '📦',
-    description: 'tools/install_portal_clis.py - bun install em cada portal.',
-    build: () => [py('tools/install_portal_clis.py')] },
-  { id: 'security-guards', kind: 'script', group: 'Scripts locais', label: 'Checar guardas de segurança', icon: '🛡️',
-    description: 'tools/security_guards.py - mesma checagem do CI.',
+  { id: 'security-guards', kind: 'script', group: 'maintenance', label: 'Guardas de segurança', icon: 'shield',
+    description: 'Mesma checagem de segurança do CI.',
     build: () => [py('tools/security_guards.py')] },
-  { id: 'framework-version', kind: 'script', group: 'Scripts locais', label: 'Checar versão do framework', icon: '🏷️',
-    description: 'tools/check_framework_version.py',
-    build: () => [py('tools/check_framework_version.py')] },
-  { id: 'tests', kind: 'script', group: 'Scripts locais', label: 'Rodar testes', icon: '✅',
-    description: 'python -m unittest discover -s tests -t . (como no CI).',
+  { id: 'tests', kind: 'script', group: 'maintenance', label: 'Rodar testes', icon: 'check',
+    description: 'Suíte de testes do projeto (unittest, como no CI).',
     build: () => [py('-m', 'unittest', 'discover', '-s', 'tests', '-t', '.')] },
 
   // --- Ações de card (candidaturas do tracker) ---
-  { id: 'compile-cv', kind: 'script', group: 'card', label: 'Compilar CV', icon: '⚙️',
+  { id: 'compile-cv', kind: 'script', group: 'card', label: 'Compilar CV', icon: 'cog',
     build: (p) => {
       const tex = mustExist(rowDoc(p, 'cv_file', 'cv', '.tex'))
       return [{ cmd: 'lualatex', args: ['-interaction=nonstopmode', '-halt-on-error', tex.name], cwd: path.dirname(tex.abs) }]
     } },
-  { id: 'verify-cv', kind: 'script', group: 'card', label: 'Verificar CV', icon: '🔍',
+  { id: 'verify-cv', kind: 'script', group: 'card', label: 'Verificar CV', icon: 'eye',
     build: (p) => {
       const pdf = mustExist(rowDoc(p, 'cv_file', 'cv', '.pdf'))
       return [py('tools/verify_pdf.py', pdf.rel, '--pages', '2', '--ascii-dates'), py('tools/verify_layout.py', pdf.rel)]
     } },
-  { id: 'compile-cover', kind: 'script', group: 'card', label: 'Compilar carta', icon: '⚙️',
+  { id: 'compile-cover', kind: 'script', group: 'card', label: 'Compilar carta', icon: 'cog',
     build: (p) => {
       const tex = mustExist(rowDoc(p, 'cover_letter_file', 'cover_letters', '.tex'))
       return [{ cmd: 'xelatex', args: ['-interaction=nonstopmode', '-halt-on-error', tex.name], cwd: path.dirname(tex.abs) }]
     } },
-  { id: 'verify-cover', kind: 'script', group: 'card', label: 'Verificar carta', icon: '🔍',
+  { id: 'verify-cover', kind: 'script', group: 'card', label: 'Verificar carta', icon: 'eye',
     build: (p) => {
       const pdf = mustExist(rowDoc(p, 'cover_letter_file', 'cover_letters', '.pdf'))
       return [py('tools/verify_pdf.py', pdf.rel, '--pages', '1'), py('tools/verify_layout.py', pdf.rel)]
@@ -217,6 +222,7 @@ export function publicCatalog() {
     workspace: ROOT,
     claudeCli: Boolean(claudeBin()),
     python: python() ? [python().cmd, ...python().pre].join(' ') : null,
+    groups: GROUPS,
     commands: COMMANDS.map(({ build, prompt, ...rest }) => rest),
   }
 }

@@ -4,6 +4,9 @@ import fs from 'node:fs'
 import { spawn } from 'node:child_process'
 import { ROOT, SEEN, TRACKER, loadBoard, setSeenStatus, setTrackerStatus, httpError } from './data.js'
 import { findCommand, publicCatalog, claudeBin, pdfFor } from './commands.js'
+import { health } from './health.js'
+import { profileReport } from './profile.js'
+import { searchSettings, saveCategories, saveDays, setPortalEnabled, readLists, writeLists } from './settings.js'
 
 const running = new Map() // id do comando -> processo filho em execução
 const sseClients = new Set()
@@ -121,6 +124,39 @@ async function handle(req, res) {
   switch (route) {
     case 'GET /api/board':
       return send(res, 200, loadBoard())
+
+    case 'GET /api/health':
+      return send(res, 200, await health())
+
+    case 'GET /api/profile':
+      return send(res, 200, profileReport())
+
+    case 'GET /api/settings/search':
+      return send(res, 200, searchSettings())
+
+    case 'PUT /api/settings/categories': {
+      const body = await readJson(req)
+      saveCategories(body.categories)
+      return send(res, 200, searchSettings())
+    }
+
+    case 'PUT /api/settings/days': {
+      const body = await readJson(req)
+      saveDays(body.days)
+      return send(res, 200, searchSettings())
+    }
+
+    case 'PUT /api/settings/portal': {
+      const body = await readJson(req)
+      setPortalEnabled(body.id, body.enabled === true)
+      return send(res, 200, searchSettings())
+    }
+
+    case 'GET /api/lists':
+      return send(res, 200, readLists())
+
+    case 'PUT /api/lists':
+      return send(res, 200, writeLists(await readJson(req)))
 
     case 'GET /api/catalog':
       return send(res, 200, publicCatalog())
