@@ -2,6 +2,12 @@
   "name": "ai-job-search-dashboard",
   "version": "0.1.0",
   "description": "Addon para o ai-job-search: painel Kanban local das vagas e botões para os comandos do projeto",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/domini-crusader/ai-job-search-dashboard.git"
+  },
+  "homepage": "https://github.com/domini-crusader/ai-job-search-dashboard",
   "type": "module",
   "private": true,
   "bin": {
@@ -28,5 +34,11 @@
     "vite": "^8.3.4",
     "vue": "^3.5.44"
   },
-  "keywords": ["ai-job-search", "addon", "kanban", "vue", "vite"]
+  "keywords": [
+    "ai-job-search",
+    "addon",
+    "kanban",
+    "vue",
+    "vite"
+  ]
 }

@@ -18,7 +18,7 @@ O addon não altera o ai-job-search. Ele lê e escreve os mesmos arquivos de est
 ### Como comando global (recomendado)
 
 ```bash
-npm install -g github:<usuario>/ai-job-search-dashboard
+npm install -g github:domini-crusader/ai-job-search-dashboard
 ```
 
 Depois, de dentro da pasta do ai-job-search:
@@ -38,7 +38,7 @@ Atualizar: rode o mesmo `npm install -g` de novo. Remover: `npm uninstall -g ai-
 ### Clonado ao lado do ai-job-search
 
 ```bash
-git clone https://github.com/<usuario>/ai-job-search-dashboard.git
+git clone https://github.com/domini-crusader/ai-job-search-dashboard.git
 cd ai-job-search-dashboard
 npm install
 npm start
