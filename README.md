@@ -81,6 +81,7 @@ O servidor escuta só em `127.0.0.1`.
   Ao abrir uma etapa, você vê e edita as seções de onde o ai-job-search lê aquele dado: o resumo no `CLAUDE.md` e o detalhe nos arquivos `01`…`07` do job-application-assistant. A edição é feita por campos, itens de lista e tabelas (por exemplo, idiomas × nível), ou direto em Markdown. Comentários e o que o editor não reconhece voltam intactos.
 - **Busca:** reorganiza as escolhas que o ai-job-search oferece para o `/scrape`:
   - reordenar (arrastando), editar, criar e remover as categorias de `search-queries.md`;
+  - **Gerar com o Claude**: o Claude lê o seu setup (perfil, critérios, sites e portais) e propõe as categorias com consultas `site:` e títulos-variantes, como na seção 9 do `/setup`. A proposta entra como rascunho e só vai para o arquivo quando você salvar;
   - montar consultas por tags: cargo, site, tecnologia, nível, modalidade e local. As opções vêm do próprio workspace (sites e cargos já usados nas consultas, stack principal do perfil, filtros do `/scrape`). As consultas existentes aparecem como tags;
   - ligar e desligar portais (a chave `enabled` de cada `SKILL.md`);
   - mudar a janela de datas.

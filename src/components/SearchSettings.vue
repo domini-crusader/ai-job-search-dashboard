@@ -37,6 +37,27 @@ function onDrop(i) {
   draft.value = list
   dragFrom.value = null
 }
+// "Gerar com o Claude": a proposta substitui o rascunho e fica marcada até salvar;
+// "Descartar" volta ao que está no search-queries.md.
+const generating = ref(false)
+async function generateCats() {
+  if (dirty.value && !confirm('As alterações não salvas nas categorias serão substituídas pela proposta do Claude. Continuar?')) return
+  generating.value = true
+  try {
+    const r = await fetch('/api/settings/categories/generate', { method: 'POST', headers: { 'X-Dashboard': '1' } })
+    const data = await r.json()
+    if (!r.ok) throw new Error(data.error || `HTTP ${r.status}`)
+    draft.value = data.categories.map((c, i) => ({ ...c, key: `gen-${Date.now()}-${i}`, keywords: [], suggested: true }))
+    open.value = null
+    const cost = typeof data.cost === 'number' ? ` (custo US$ ${data.cost.toFixed(2)})` : ''
+    toast(`O Claude propôs ${data.categories.length} categorias${cost} — revise e clique em Salvar`, 'ok')
+  } catch (e) {
+    toast(e.message, 'error')
+  } finally {
+    generating.value = false
+  }
+}
+
 function add() {
   const key = `new-${Date.now()}`
   draft.value = [...draft.value, { key, title: 'Nova categoria', description: '', queries: '', notes: '', keywords: [] }]
@@ -159,13 +180,17 @@ async function listFrom(cat) {
         <p class="muted small">A ordem é a prioridade usada pelo /scrape. Arraste para reorganizar.</p>
       </div>
       <div class="actions-inline">
+        <button class="btn sm" :disabled="generating" title="O Claude lê o seu setup e propõe as categorias; você revisa antes de salvar" @click="generateCats">
+          <Icon :name="generating ? 'refresh' : 'star'" :size="14" :class="{ spin: generating }" />
+          {{ generating ? 'Gerando… (até 2 min)' : 'Gerar com o Claude' }}
+        </button>
         <button class="btn sm" @click="add"><Icon name="plus" :size="14" /> Categoria</button>
       </div>
     </div>
 
     <div class="panel cat-list">
       <div
-        v-for="(c, i) in draft" :key="c.key" class="cat" :class="{ expanded: open === c.key }"
+        v-for="(c, i) in draft" :key="c.key" class="cat" :class="{ expanded: open === c.key, suggested: c.suggested }"
         draggable="true" @dragstart="dragFrom = i" @dragover.prevent @drop.prevent="onDrop(i)"
       >
         <div class="cat-row">

@@ -9,7 +9,7 @@ import { health } from './health.js'
 import { jobDetails, brief } from './enrich.js'
 import { profileReport, stepSections, saveSection } from './profile.js'
 import { searchSettings, saveCategories, saveDays, setPortalEnabled, readLists, writeLists, writeText, readText, writeVocab, resetVocab, includeSite } from './settings.js'
-import { generateVocab } from './generate.js'
+import { generateVocab, generateCategories } from './generate.js'
 
 const running = new Map() // id do comando -> processo filho em execução
 const sseClients = new Set()
@@ -202,6 +202,9 @@ async function handle(req, res) {
       else writeVocab(body.groups)
       return send(res, 200, searchSettings())
     }
+
+    case 'POST /api/settings/categories/generate':
+      return send(res, 200, await generateCategories())
 
     case 'POST /api/settings/vocab/generate':
       return send(res, 200, await generateVocab())
